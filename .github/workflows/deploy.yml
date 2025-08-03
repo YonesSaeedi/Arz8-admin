@@ -20,6 +20,9 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Test Connection
+        run: ssh -T -p 3031 cp38729@65.21.239.21 || true
+
       - name: Deploy Laravel
         run: |
           TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
