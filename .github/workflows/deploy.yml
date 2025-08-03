@@ -1,0 +1,98 @@
+name: Laravel CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy_backend:
+    name: Deploy Laravel Backend
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[backend]') || !contains(github.event.head_commit.message, '[frontend]')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.5.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy Laravel
+        run: |
+          if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
+            TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
+          fi
+
+          ssh -o StrictHostKeyChecking=no -p 22 root@65.21.239.21 "
+            cd ${TARGET_DIR} &&
+            git reset --hard HEAD &&
+            git clean -fd &&
+            git pull origin ${GITHUB_REF##*/} --no-rebase &&
+            /usr/local/bin/composer install --no-dev --optimize-autoloader &&
+            /usr/local/bin/php artisan optimize:clear &&
+            sudo chown -R payfa24:payfa24 ${TARGET_DIR}
+          "
+
+  build_frontend:
+    name: Build & Deploy Vue 2
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[frontend]') || !contains(github.event.head_commit.message, '[backend]')
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js 14
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14.x
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Clean installation
+        run: |
+          rm -rf node_modules public/js public/css
+          npm cache clean --force
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm install --legacy-peer-deps --prefer-offline --no-audit
+
+      - name: Install root dependencies
+        working-directory: ./
+        run: npm install --legacy-peer-deps --prefer-offline --no-audit
+
+      - name: Build production assets
+        run: npm run prod
+
+      - name: Verify built assets
+        run: |
+          ls -la public/js/
+          ls -la public/css/
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 65.21.239.21 >> ~/.ssh/known_hosts
+
+      - name: Clean remote directory
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@65.21.239.21 "
+            find /home/cp38729/domains/arz8x.com/admin/ -mindepth 1 ! -name 'index.php' -delete &&
+            rm -rf /home/cp38729/domains/arz8x.com/saeedi-admin/frontend/*
+          "
+
+      - name: Upload built assets
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: 65.21.239.21
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          source: "public/*"
+          target: "/home/cp38729/domains/arz8x.com/admin"
+          strip_components: 1

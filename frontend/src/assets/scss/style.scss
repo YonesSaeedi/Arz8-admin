@@ -1,0 +1,158 @@
+/*================================================================================
+
+NOTE:
+------
+PLACE HERE YOUR OWN SCSS CODES AND IF NEEDED, OVERRIDE THE STYLES FROM THE OTHER STYLESHEETS.
+WE WILL RELEASE FUTURE UPDATES SO IN ORDER TO NOT OVERWRITE YOUR STYLES IT'S BETTER LIKE THIS.  */
+
+@font-face {
+    font-family: iranyekan;
+    font-style: normal;
+    font-weight: 300;
+    src: url('fonts/iranyekan/eot/iranyekanweblight.eot');
+    src: url('fonts/iranyekan/eot/iranyekanweblight.eot?#iefix') format('embedded-opentype'),  /* IE6-8 */
+    url('fonts/iranyekan/woff2/iranyekanweblight.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('fonts/iranyekan/woff/iranyekanweblight.woff') format('woff'),  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+    url('fonts/iranyekan/ttf/iranyekanweblight.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: vazir;
+    font-style: normal;
+    font-weight: 300;
+    src: url('fonts/vazir/Vazir.eot');
+    src: url('fonts/vazir/Vazir.eot?#iefix') format('embedded-opentype'),  /* IE6-8 */
+    url('fonts/vazir/Vazir.woff2') format('woff2'),  /* FF39+,Chrome36+, Opera24+*/
+    url('fonts/vazir/Vazir.woff') format('woff'),  /* FF3.6+, IE9, Chrome6+, Saf5.1+*/
+    url('fonts/vazir/Vazir.ttf') format('truetype');
+}
+
+html[dir=rtl] {
+    .vazir {
+        font-family: vazir !important;
+        body,button,input,select,textarea {
+            font-family: vazir,"Montserrat", Helvetica, Arial, sans-serif !important;
+        }
+    }
+}
+body,button,input,select,textarea,.navigation,.tooltip,.navigation .navigation-header,.header-navbar {
+    font-family: iranyekan,"Montserrat", Helvetica, Arial, sans-serif !important;
+}
+
+[dir=rtl] .table.b-table > thead > tr > [aria-sort]:not(.b-table-sort-icon-left), [dir=rtl] .table.b-table > tfoot > tr > [aria-sort]:not(.b-table-sort-icon-left) {
+    background-position: right calc(.92rem) center !important;
+}
+
+table tr th div{
+    white-space: nowrap;
+}
+
+[dir=rtl] .pagination .page-item.next-item .page-link svg, [dir=rtl] .pagination .page-item .page-link svg {
+    -webkit-transform: rotate( 180deg) !important;;
+    transform: rotate(180deg)!important;
+}
+.table th, [dir] .table td {
+    padding: 0.72rem 1rem;
+}
+
+.swal2-input{
+    height: 2.6em;
+}
+
+.swal2-checkbox, .swal2-file, .swal2-input, .swal2-radio, .swal2-select, .swal2-textarea {
+    margin: 1em auto !important;
+}
+
+.swal2-container .swal2-modal .swal2-input{
+    width: 100%;
+    font-size:17px;
+}
+
+.swal2-popup{
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.swal2-header{
+    .swal2-title{
+        font-size: 1.3rem !important;
+        font-weight: 900 !important;
+        margin-bottom: 10px;
+    }
+}
+.swal2-content{
+    select:focus,
+    input:focus,
+    textarea:focus {
+        outline: none;
+        box-shadow: none;
+    }
+}
+.swal2-actions{
+    padding: 0 1.6em;
+    width: 100%;
+
+    .swal2-confirm{
+        width: 70%;
+    }
+    .swal2-cancel{
+        width: 25%;
+    }
+}
+
+
+
+@media only screen and (max-width: 600px) {
+    .swal2-html-container{
+        margin: 0 !important;
+    }
+}
+
+.line-height-0{
+    line-height: 0 !important;
+}
+
+.disable-block {
+    pointer-events: none;
+    opacity: 0.4;
+}
+.ql-editor{
+    direction: ltr;
+    font-family: iranyekan,"Montserrat", Helvetica, Arial, sans-serif !important;
+}
+
+.ltr{
+    direction: rtl !important;
+}
+.rtl{
+    direction: ltr !important;
+}
+
+.disable-block{
+    pointer-events: none;
+    opacity: 0.4;
+}
+.swal2-textarea{
+    width: 100%;
+}
+
+.swal2-html-container {
+    margin:0 !important;
+}
+
+/* scrollbar */
+::-webkit-scrollbar {
+    width: 7px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
