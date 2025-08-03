@@ -24,13 +24,18 @@ jobs:
         run: |
           TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
           ssh -o StrictHostKeyChecking=no -p 3031 root@65.21.239.21 "
-            cd ${TARGET_DIR} &&
-            git config --global --add safe.directory ${TARGET_DIR} &&
-            git reset --hard HEAD &&
-            git clean -fd &&
-            git pull origin ${GITHUB_REF##*/} --no-rebase &&
-            /usr/local/php82/bin/php /usr/local/bin/composer install --no-dev --optimize-autoloader &&
-            /usr/local/php82/bin/php artisan optimize:clear
+          # نصب خودکار کامپوزر اگر وجود نداشته باشد
+          if [ ! -f /usr/local/bin/composer ]; then
+          curl -sS https://getcomposer.org/installer | /usr/local/php82/bin/php82
+          mv composer.phar /usr/local/bin/composer
+          chmod +x /usr/local/bin/composer
+          fi
+
+          cd ${TARGET_DIR}
+          git reset --hard HEAD
+          git pull origin ${GITHUB_REF##*/}
+          /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
+          /usr/local/php82/bin/php82 artisan optimize:clear
           "
 
   build_frontend:
