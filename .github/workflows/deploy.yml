@@ -29,8 +29,8 @@ jobs:
             git reset --hard HEAD &&
             git clean -fd &&
             git pull origin ${GITHUB_REF##*/} --no-rebase &&
-            /usr/local/bin/composer install --no-dev --optimize-autoloader &&
-            /usr/local/bin/php artisan optimize:clear
+            /usr/local/php82/bin/php /usr/local/bin/composer install --no-dev --optimize-autoloader &&
+            /usr/local/php82/bin/php artisan optimize:clear
           "
 
   build_frontend:
