@@ -78,10 +78,12 @@ jobs:
 
       - name: Prepare SSH
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 65.21.239.21 >> ~/.ssh/known_hosts
+          export SSH_DIR="$RUNNER_TEMP/.ssh"
+          mkdir -p "$SSH_DIR"
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > "$SSH_DIR/id_rsa"
+          chmod 600 "$SSH_DIR/id_rsa"
+          ssh-keyscan -H 65.21.239.21 >> "$SSH_DIR/known_hosts"
+          echo "::add-path::$SSH_DIR"
 
       - name: Clean remote directory
         run: |
