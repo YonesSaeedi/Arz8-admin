@@ -81,7 +81,7 @@ jobs:
 
       - name: Clean remote directory
         run: |
-          ssh -o StrictHostKeyChecking=no root@65.21.239.21 "
+          ssh -p 3031 -o StrictHostKeyChecking=no root@65.21.239.21 "
             find /home/cp38729/domains/arz8x.com/admin/ -mindepth 1 ! -name 'index.php' -delete &&
             rm -rf /home/cp38729/domains/arz8x.com/saeedi-admin/frontend/*
           "
