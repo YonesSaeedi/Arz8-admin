@@ -97,11 +97,7 @@
 
                 <b-tab>
                     <template #title>
-                        <feather-icon
-                            icon="ShieldIcon"
-                            size="18"
-                            class="mr-1"
-                        />
+                        <i class="cf cf-usdt" style="font-size: 20px;color:#22c876"></i>
                         <span class="font-weight-bold">تتر</span>
                     </template>
                     <Tether @onSubmit="onSubmit" :settings="settings" v-if="settings"/>
@@ -181,34 +177,6 @@
 
                 <b-tab>
                     <template #title>
-                        <img :src="baseURL+'images/currency/' + iconSymbol('PM')" width="20px" />
-                        <span class="font-weight-bold ml-1">پرفکت مانی</span>
-                    </template>
-                    <PerfectMoney @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==14"/>
-                </b-tab>
-                <b-tab>
-                    <template #title>
-                        <img :src="baseURL+'images/currency/' + iconSymbol('PMV')" width="20px" />
-                        <span class="font-weight-bold ml-1">ووچر پرفکت مانی</span>
-                    </template>
-                    <PMvoucher @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==15"/>
-                </b-tab>
-                <b-tab>
-                    <template #title>
-                        <img :src="baseURL+'images/currency/' + iconSymbol('PSV')" width="20px" />
-                        <span class="font-weight-bold ml-1">پی اس ووچرز</span>
-                    </template>
-                    <PSVouchers @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==16"/>
-                </b-tab>
-                <b-tab>
-                    <template #title>
-                        <img :src="baseURL+'images/currency/' + iconSymbol('UUSD')" width="20px" />
-                        <span class="font-weight-bold ml-1">یوتوپیا</span>
-                    </template>
-                    <Utopia @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==17"/>
-                </b-tab>
-                <b-tab>
-                    <template #title>
                         <feather-icon
                             icon="ImageIcon"
                             size="18"
@@ -216,7 +184,21 @@
                         />
                         <span class="font-weight-bold">استوری</span>
                     </template>
-                    <Stories @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==18"/>
+                    <Stories @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==14"/>
+                </b-tab>
+                <b-tab>
+                    <template #title>
+                        <img :src="baseURL+'images/currency/' + iconSymbol('USDT')" width="20px" />
+                        <span class="font-weight-bold ml-1">USDT1</span>
+                    </template>
+                    <PSVouchers @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==15"/>
+                </b-tab>
+                <b-tab>
+                    <template #title>
+                        <img :src="baseURL+'images/currency/' + iconSymbol('USDT')" width="20px" />
+                        <span class="font-weight-bold ml-1">USDT2</span>
+                    </template>
+                    <Utopia @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==16"/>
                 </b-tab>
             </b-tabs>
         </section>

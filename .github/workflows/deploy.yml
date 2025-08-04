@@ -36,6 +36,9 @@ jobs:
           git pull origin ${GITHUB_REF##*/}
           /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
           /usr/local/php82/bin/php82 artisan optimize:clear
+
+          chown -R cp38729:cp38729 ${TARGET_DIR}
+          chmod -R 755 ${TARGET_DIR}
           "
 
   build_frontend:

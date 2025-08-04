@@ -11,18 +11,17 @@ use Illuminate\Support\Facades\Cache;
 
 class CryptoLittleController extends ExchangeApi
 {
-    protected $exchangeInfoBinance;
-    protected $exchangeInfoCoinex;
-    protected $exchangeInfoKucoin;
-    protected $pricesBinance;
-
-    public function __construct()
-    {
-        parent::__construct();
-        $this->exchangeInfoBinance = Cache::get('exchangeInfoBinance');
-        $this->exchangeInfoCoinex = Cache::get('exchangeInfoCoinex');
-        $this->exchangeInfoKucoin = Cache::get('exchangeInfoKucoin');
-        $this->pricesBinance = Cache::get('pricesBinance');
+    function exchangeInfoBinance(){
+        return Cache::get('exchangeInfoBinance');
+    }
+    function exchangeInfoCoinex(){
+        return Cache::get('exchangeInfoCoinex');
+    }
+    function exchangeInfoKucoin(){
+        return Cache::get('exchangeInfoKucoin');
+    }
+    function pricesBinance(){
+        return Cache::get('pricesBinance');
     }
 
     function listLittle(Request $request){
@@ -193,16 +192,17 @@ class CryptoLittleController extends ExchangeApi
     public function minTrade($crypto)
     {
         if ($crypto->exchange == 'binance') {
-            $filters = $this->exchangeInfoBinance['symbols'][$crypto->symbol.'USDT']['filters'] ?? [];
+            $filters = $this->exchangeInfoBinance()['symbols'][$crypto->symbol.'USDT']['filters'] ?? [];
             $min = array_column($filters, 'minNotional')[0] ?? 1;
-            $fee = $this->pricesBinance[$crypto->symbol.'USDT'] ?? 1;
+            $fee = $this->pricesBinance()[$crypto->symbol.'USDT'] ?? 1;
             $min_amount = ($min / $fee) * 1.05;
         } elseif ($crypto->exchange == 'coinex') {
-            $min_amount = $this->exchangeInfoCoinex[$crypto->symbol.'USDT']['min_amount'] ?? 1;
+            $min_amount = $this->exchangeInfoCoinex()[$crypto->symbol.'USDT']['min_amount'] ?? 1;
             $min_amount *= 1.05;
         } elseif ($crypto->exchange == 'kucoin') {
-            $index = array_search($crypto->symbol.'-USDT', array_column($this->exchangeInfoKucoin, 'symbol'));
-            $min_amount = $this->exchangeInfoKucoin[$index]['baseMinSize'] ?? 1;
+            $exchangeInfoKucoin = $this->exchangeInfoKucoin();
+            $index = array_search($crypto->symbol.'-USDT', array_column($exchangeInfoKucoin, 'symbol'));
+            $min_amount = $exchangeInfoKucoin[$index]['baseMinSize'] ?? 1;
             $min_amount *= 1.15;
         }
         return $min_amount;
@@ -211,7 +211,7 @@ class CryptoLittleController extends ExchangeApi
 
     function getAmountLOTSIZE($symbol,$amount_coin){
         if($symbol != 'USDT'):
-            $exchangeInfo = $this->exchangeInfoBinance;
+            $exchangeInfo = $this->exchangeInfoBinance();
             if(!in_array($symbol,$this->stableCoin))
                 if(!in_array($symbol,$this->busdCoin))
                     $LOT_SIZE = $exchangeInfo['symbols'][$symbol . 'USDT']['filters'][1]['minQty'];

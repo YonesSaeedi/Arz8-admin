@@ -41,6 +41,9 @@ class OrdersController extends Controller
             DB::raw("JSON_UNQUOTE(JSON_EXTRACT(orders.data, '$.name')) as nameCoin")
         );
         $orders = $query->paginate($limit)->through(function ($order) {
+            $map = ['PSV' => 'USDT1', 'UUSD' => 'USDT2', 'PM' => 'USDT3', 'PMV' => 'USDT4'];
+            $symbol = $map[$order->symbol] ?? $order->symbol;
+            $name = $map[$order->symbol] ?? $order->name;
             return [
                 'id' => $order->id,
                 'id_user' => $order->id_user, /////
@@ -50,13 +53,11 @@ class OrdersController extends Controller
                 'status' => $order->status,
                 'date' =>  $this->convertDate($order->created_at, 'Y/m/d - H:i'),
                 'user' => $order->user,
-                'crypto' => isset($order->crypto)?$order->crypto:['symbol'=>$order->symbol,'name'=>$order->nameCoin],
-                'symbol' => $order->symbol,
-                'nameCoin' => $order->nameCoin,
+                'crypto' => isset($order->crypto)?$order->crypto:['symbol'=>$symbol,'name'=>$name],
             ];
         });
 
-        $result->list =  $orders->items();;
+        $result->list =  $orders->items();
         $result->total = $totalCount;
 
         return response()->json($result);
