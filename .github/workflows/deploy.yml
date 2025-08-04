@@ -20,9 +20,6 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Test Connection
-        run: ssh -T -p 3031 cp38729@65.21.239.21 || true
-
       - name: Deploy Laravel
         run: |
           TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
@@ -40,6 +37,7 @@ jobs:
           /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
           /usr/local/php82/bin/php82 artisan optimize:clear
           "
+
   build_frontend:
     name: Build & Deploy Vue 2
     runs-on: ubuntu-latest
@@ -76,18 +74,14 @@ jobs:
           ls -la public/js/
           ls -la public/css/
 
-      - name: Prepare SSH
-        run: |
-          export SSH_DIR="$RUNNER_TEMP/.ssh"
-          mkdir -p "$SSH_DIR"
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > "$SSH_DIR/id_rsa"
-          chmod 600 "$SSH_DIR/id_rsa"
-          ssh-keyscan -H 65.21.239.21 >> "$SSH_DIR/known_hosts"
-          echo "::add-path::$SSH_DIR"
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.5.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Clean remote directory
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@65.21.239.21 "
+          ssh -o StrictHostKeyChecking=no root@65.21.239.21 "
             find /home/cp38729/domains/arz8x.com/admin/ -mindepth 1 ! -name 'index.php' -delete &&
             rm -rf /home/cp38729/domains/arz8x.com/saeedi-admin/frontend/*
           "
