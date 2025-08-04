@@ -98,30 +98,6 @@
                 <b-tab>
                     <template #title>
                         <feather-icon
-                            icon="FlagIcon"
-                            size="18"
-                            class="mr-1"
-                        />
-                        <span class="font-weight-bold">پاپ آپ</span>
-                    </template>
-                    <pop-up @onSubmit="onSubmit" :settings="settings" v-if="settings"/>
-                </b-tab>
-
-                <b-tab>
-                    <template #title>
-                        <feather-icon
-                            icon="AlertTriangleIcon"
-                            size="18"
-                            class="mr-1"
-                        />
-                        <span class="font-weight-bold">هشدار ها</span>
-                    </template>
-                    <alert @onSubmit="onSubmit" :settings="settings" v-if="settings"/>
-                </b-tab>
-
-                <b-tab>
-                    <template #title>
-                        <feather-icon
                             icon="ShieldIcon"
                             size="18"
                             class="mr-1"
@@ -200,7 +176,7 @@
                         />
                         <span class="font-weight-bold">بننر</span>
                     </template>
-                    <Banner @onSubmit="onSubmit" @getSettings="getSettings" :settings="settings" v-if="settings && tabActive==15"/>
+                    <Banner @onSubmit="onSubmit" @getSettings="getSettings" :settings="settings" v-if="settings && tabActive==13"/>
                 </b-tab>
 
                 <b-tab>
@@ -208,28 +184,28 @@
                         <img :src="baseURL+'images/currency/' + iconSymbol('PM')" width="20px" />
                         <span class="font-weight-bold ml-1">پرفکت مانی</span>
                     </template>
-                    <PerfectMoney @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==16"/>
+                    <PerfectMoney @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==14"/>
                 </b-tab>
                 <b-tab>
                     <template #title>
                         <img :src="baseURL+'images/currency/' + iconSymbol('PMV')" width="20px" />
                         <span class="font-weight-bold ml-1">ووچر پرفکت مانی</span>
                     </template>
-                    <PMvoucher @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==17"/>
+                    <PMvoucher @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==15"/>
                 </b-tab>
                 <b-tab>
                     <template #title>
                         <img :src="baseURL+'images/currency/' + iconSymbol('PSV')" width="20px" />
                         <span class="font-weight-bold ml-1">پی اس ووچرز</span>
                     </template>
-                    <PSVouchers @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==18"/>
+                    <PSVouchers @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==16"/>
                 </b-tab>
                 <b-tab>
                     <template #title>
                         <img :src="baseURL+'images/currency/' + iconSymbol('UUSD')" width="20px" />
                         <span class="font-weight-bold ml-1">یوتوپیا</span>
                     </template>
-                    <Utopia @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==19"/>
+                    <Utopia @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==17"/>
                 </b-tab>
                 <b-tab>
                     <template #title>
@@ -240,7 +216,7 @@
                         />
                         <span class="font-weight-bold">استوری</span>
                     </template>
-                    <Stories @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==20"/>
+                    <Stories @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==18"/>
                 </b-tab>
             </b-tabs>
         </section>
@@ -259,8 +235,8 @@
     import levels from "./Levels";
     import LevelsAccount from "./LevelsAccount";
     import Receipt from "./Receipt";
-    import PopUp from "./PopUp";
-    import Alert from "./alert";
+    //import PopUp from "./PopUp";
+    //import Alert from "./Alert";
     import Binance from "./Binance";
     import Tether from "./Tether";
     import Coinex from "./Coinex";
@@ -285,8 +261,8 @@
             levels,
             LevelsAccount,
             Receipt,
-            PopUp,
-            Alert,
+            //PopUp,
+            //Alert,
             Binance,
             Tether,
             Coinex,
