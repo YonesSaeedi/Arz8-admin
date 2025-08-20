@@ -14,10 +14,6 @@ class ExchangeApi extends Controller
     public $stableCoin = [];
     public $busdCoin = [];
 
-    public $fastPriceBinance = [];
-    public $fastPriceCoinex = [];
-    public $fastPriceKucoin = [];
-
     public function __construct()
     {
         $this->binance = new BinanceApi();
@@ -29,17 +25,27 @@ class ExchangeApi extends Controller
         $this->fastPriceKucoin = (array)Cache::get('pricesKucoin');
     }
 
+    function fastPriceBinance(){
+        return (array)Cache::get('pricesBinance');
+    }
+    function fastPriceCoinex(){
+        return (array)Cache::get('pricesCoinex');
+    }
+    function fastPriceKucoin(){
+        return (array)Cache::get('pricesKucoin');
+    }
+
     function getFee($crypto){
         if($crypto->exchange == 'binance'){
-            $priceAll = $this->fastPriceBinance;
+            $priceAll = $this->fastPriceBinance();
             $fee = $priceAll[$crypto->symbol . 'USDT'] ?? '0';
         }
         else if($crypto->exchange == 'coinex'){
-            $priceAll = $this->fastPriceCoinex;
+            $priceAll = $this->fastPriceCoinex();
             $fee = $priceAll[$crypto->symbol . 'USDT'] ?? '0';
         }
         else if($crypto->exchange == 'kucoin'){
-            $priceAll = $this->fastPriceKucoin;
+            $priceAll = $this->fastPriceKucoin();
             $fee = $priceAll[$crypto->symbol] ?? '0';
         }
         return $fee;
@@ -53,9 +59,9 @@ class ExchangeApi extends Controller
             $pricesCoinex = $this->coinex->api[0]->allPrice();
             $pricesKucoin = $this->kucoin->currency->getPrices();
         }else{
-            $pricesBinance = $this->fastPriceBinance;
-            $pricesCoinex = $this->fastPriceCoinex;
-            $pricesKucoin = $this->fastPriceKucoin;
+            $pricesBinance = $this->fastPriceBinance();
+            $pricesCoinex = $this->fastPriceCoinex();
+            $pricesKucoin = $this->fastPriceKucoin();
         }
         foreach ($cryptocurrency as $crypto){
             if ($crypto->symbol != 'USDT') {
@@ -93,15 +99,15 @@ class ExchangeApi extends Controller
             $percent = 8;
         }else{
             if($crypto->exchange == 'binance'){
-                $priceAll = $this->fastPriceBinance;
+                $priceAll = $this->fastPriceBinance();
                 $price = $priceAll[$crypto->symbol . 'USDT'] ?? 0;
             }
             else if($crypto->exchange == 'coinex'){
-                $priceAll = $this->fastPriceCoinex;
+                $priceAll = $this->fastPriceCoinex();
                 $price = $priceAll[$crypto->symbol . 'USDT'] ?? 0;
             }
             else if($crypto->exchange == 'kucoin'){
-                $priceAll = $this->fastPriceKucoin;
+                $priceAll = $this->fastPriceKucoin();
                 $price = $priceAll[$crypto->symbol] ?? 0;
             }
 
@@ -129,9 +135,9 @@ class ExchangeApi extends Controller
             $pricesCoinex = $this->coinex->api[0]->allPrice();
             $pricesKucoin = $this->kucoin->currency->getPrices();
         }else{
-            $pricesBinance = $this->fastPriceBinance;
-            $pricesCoinex = $this->fastPriceCoinex;
-            $pricesKucoin = $this->fastPriceKucoin;
+            $pricesBinance = $this->fastPriceBinance();
+            $pricesCoinex = $this->fastPriceCoinex();
+            $pricesKucoin = $this->fastPriceKucoin();
         }
         foreach ($cryptocurrency as $crypto){
             $result = self::priceUsdtInToman($crypto);

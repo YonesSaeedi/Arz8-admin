@@ -36,7 +36,6 @@ class MarketingLeague extends Command
      *
      * @return void
      */
-    public $birthplace;
     public function __construct()
     {
         parent::__construct();
@@ -50,43 +49,90 @@ class MarketingLeague extends Command
     public function handle()
     {
         $reward = [
-            ['id_crypto'=>5,'amount'=>20],
-            ['id_crypto'=>5,'amount'=>10],
-            ['id_crypto'=>5,'amount'=>5]
+            ['id_crypto' => 5, 'amount' => 20],
+            ['id_crypto' => 5, 'amount' => 10],
+            ['id_crypto' => 5, 'amount' => 5]
         ];
         $titles = ['جایزه نفر اول', 'جایزه نفر دوم', 'جایزه نفر سوم'];
 
-        $start = Carbon::yesterday()->startOfDay();
-        $end = Carbon::yesterday()->endOfDay();
+        $startOfLeague = Carbon::createFromFormat('Y-m-d', '2025-08-07')->startOfDay();
+        $yesterdayStart = Carbon::yesterday()->startOfDay();
+        $yesterdayEnd = Carbon::yesterday()->endOfDay();
 
-        $top3 = DB::table('orders')
-            ->select('id_user', DB::raw('SUM(amount) as total_amount'))
-            ->where('id_user', '!=', 1)
+        // گرفتن تاریخ آخرین برد هر کاربر
+        $winnerDates = Ml::select('date', 'id_user_1', 'id_user_2', 'id_user_3')->get();
+        $userLastWinMap = [];
+
+        foreach ($winnerDates as $row) {
+            $winDate = Carbon::parse($row->date)->addDay()->startOfDay(); // شروع محاسبه از روز بعد برد
+            foreach (['id_user_1', 'id_user_2', 'id_user_3'] as $field) {
+                $uid = $row->{$field};
+                if ($uid) {
+                    if (!isset($userLastWinMap[$uid]) || $winDate->gt($userLastWinMap[$uid])) {
+                        $userLastWinMap[$uid] = $winDate;
+                    }
+                }
+            }
+        }
+
+        // آرایه‌ای برای ذخیره مجموع خرید هر کاربر
+        $usersTotal = [];
+
+        // بارگذاری تدریجی سفارش‌ها با chunk
+        DB::table('orders')
             ->where('status', 'success')
-            ->whereBetween('created_at', [$start, $end])
-            ->groupBy('id_user')
-            ->orderByDesc('total_amount')
-            ->limit(3)
-            ->get();
+            ->where('created_at', '<=', $yesterdayEnd)
+            ->where('created_at', '>=', $startOfLeague)
+            ->where('id_user', '!=', 1)
+            ->select('id_user', 'amount', 'created_at')
+            ->orderBy('id_user')
+            ->chunk(1000, function ($ordersChunk) use (&$usersTotal, $userLastWinMap, $yesterdayEnd, $startOfLeague) {
+                foreach ($ordersChunk as $order) {
+                    $uid = $order->id_user;
+                    // تاریخ شروع محاسبه برای هر کاربر: روز بعد آخرین برد یا شروع لیگ
+                    $userStart = $userLastWinMap[$uid] ?? $startOfLeague;
 
-// پرداخت جوای      ز
+                    $createdAt = Carbon::parse($order->created_at);
+                    if ($createdAt->gte($userStart) && $createdAt->lte($yesterdayEnd)) {
+                        if (!isset($usersTotal[$uid])) {
+                            $usersTotal[$uid] = 0;
+                        }
+                        $usersTotal[$uid] += $order->amount;
+                    }
+                }
+            });
+
+        // تبدیل به collection و رتبه‌بندی
+        $rankedUsers = collect($usersTotal)
+            ->map(function ($total, $id_user) {
+                return (object)[
+                    'id_user' => $id_user,
+                    'total_amount' => round($total)
+                ];
+            })
+            ->sortByDesc('total_amount')
+            ->values();
+
+        // گرفتن سه نفر اول با مجموع خرید بالاتر از صفر
+        $top3 = $rankedUsers->filter(fn($item) => $item->total_amount > 0)->take(3);
+
+        // پرداخت جوایز
         foreach ($top3 as $key => $entry) {
             if (!isset($reward[$key])) break;
             $userId = $entry->id_user;
             $this->transactionCryptoWallet($userId, (object)$reward[$key], $titles[$key]);
         }
 
-        // ذخیره در جدول لیگ
+        // ذخیره نتایج در جدول لیگ
         $MarketingLeague = new Ml();
         $MarketingLeague->date = Carbon::yesterday()->toDateString();
         $MarketingLeague->id_user_1 = $top3[0]->id_user ?? null;
         $MarketingLeague->id_user_2 = $top3[1]->id_user ?? null;
         $MarketingLeague->id_user_3 = $top3[2]->id_user ?? null;
-        $MarketingLeague->data = json_encode(['20 تتر','10 تتر','5 تتر']);
+        $MarketingLeague->data = json_encode(['20 تتر', '10 تتر', '5 تتر']);
         $MarketingLeague->save();
-        //d($top3,$MarketingLeague->save());
-
     }
+
 
     private function transactionCryptoWallet($id_user,$reward,$description){
         $crypto = Cryptocurrency::find($reward->id_crypto);

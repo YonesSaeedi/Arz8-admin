@@ -85,28 +85,32 @@ Arz8.com'
         $time = time();
         $params = array(
             "access_key" => "fee4864be29c44fdb87a6a226516adb5",
-            "url" => "https://coin360.com/widget/map?utm_source=embed_map",
+            "url" => "https://coin360.com/widget/map?utm_source=embed_map&v=" . $time, // پارامتر ضد کش
             "format" => "png",
             "quality" => "".rand(90,100),
             "delay" => "3",
+            "fresh" => "true", // از داکیومنت apiflash
             "js" => "document.querySelector('section:first-child').remove();document.querySelectorAll('aside').forEach(el => el.remove());",
         );
+
         $image_data = file_get_contents("https://api.apiflash.com/v1/urltoimage?" . http_build_query($params));
-        file_put_contents(storage_path()."/coin360_".$time.".png", $image_data);
-        $inputFile = InputFile::create(storage_path().'/coin360_'.$time.'.png', 'coin360_'.$time.'.png');
+        $fileName = storage_path()."/coin360_".$time.".png";
+        file_put_contents($fileName, $image_data);
+
+        $inputFile = InputFile::create($fileName, 'coin360_'.$time.'.png');
         sleep(2);
-       $response =  $this->telegram->sendPhoto([
+
+        $response =  $this->telegram->sendPhoto([
             'chat_id' => $this->chanel,
             'photo' => $inputFile,
-            'caption' => '📈 هم اکنون وضعیت بازار رمز ارز
-'.$this->chanel.'
-Arz8.com'
+            'caption' => "📈 هم اکنون وضعیت بازار رمز ارز\n".$this->chanel."\nArz8.com"
         ]);
 
         sleep(1);
-        unlink(storage_path().'/coin360_'.$time.'.png');
-        return $response??'o';
+        unlink($fileName);
+        return $response ?? 'o';
     }
+
 
     function test(){
         $this->telegram->sendMessage([

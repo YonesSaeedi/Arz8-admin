@@ -961,7 +961,6 @@ class CryptoController extends ExchangeApi
             $success = 0;
             $failer = 0;
             $minLimit = 0;
-
             $little = new CryptoLittleController();
             foreach ($cryptos as $crypto){
                 $allBalanceAvailable = WalletsCrypto::where('id_crypto',$crypto->id)->sum('value_available_num');

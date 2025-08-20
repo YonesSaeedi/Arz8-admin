@@ -97,6 +97,20 @@ class Table2Controller extends Controller
             $isTransferTo = User::find($data->senderUser??$transaction->id_user)->national_code;
             $isTransferFrom = User::find($data->receivingUser??$transaction->id_user)->national_code;
         }
+        if (isset($data->info)) {
+            $fromAddress = $data->info->from_address
+                ?? ($data->withdraw->withdrawalId ?? '')
+                ?? '';
+            $toAddress   = $data->info->to_address
+                ?? (property_exists($data->info, 'address') ? $data->info->address : '');
+        } elseif (isset($data->deposit)) {
+            $fromAddress = $data->deposit->from_address ?? 'kucoin';
+            $toAddress   = $data->deposit->to_address
+                ?? (property_exists($data->deposit, 'address') ? $data->deposit->address : '');
+        } elseif ($isTransfer) {
+            $fromAddress = $isTransferTo ?? '';
+            $toAddress   = $isTransferFrom ?? '';
+        }
         return [
             //$transaction->id,
             'azar',                                              // F1
@@ -115,8 +129,8 @@ class Table2Controller extends Controller
             $transaction->updated_at->format('His'),             // F14
             $transaction->updated_at->format('Ymd'),             // F15
             null,null,                                           // F16 - F17
-            isset($data->info)? $data->info->from_address??$data->withdraw->withdrawalId??'':(isset($data->deposit)? $data->deposit->from_address??'kucoin':$isTransferTo??''),                            // F18
-            isset($data->info)?$data->info->to_address??$data->info->address:(isset($data->deposit)? $data->deposit->to_address??$data->deposit->address:$isTransferFrom??''),                            // F19
+            $fromAddress,                            // F18
+            $toAddress,                            // F19
             $isDeposit ? (isset($data->deposit->memo)?$data->deposit->memo:$transaction->destination_tag) : (isset($data->deposit->memo)?$data->deposit->memo:$transaction->destination_tag),                                          // F20
             $transaction->withdraw_fee??0,                                                   // F21
             '01',                                                // F22
