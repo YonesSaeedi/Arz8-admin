@@ -170,6 +170,11 @@ class PricingContoller extends ExchangeApi
 
     function test()
     {
+       /* $BotAdminTelegram = 'App\Http\Controllers\Telegram\Admin\AdminController';
+        $coin360 = app($BotAdminTelegram)->coin360();
+        dd(111,$coin360);*/
+
+
         $t = Cache::get('general_cryptocurrency');
         dd($t);
 
@@ -178,9 +183,7 @@ class PricingContoller extends ExchangeApi
         $ct = app('App\Http\Controllers\Settings\CryptoLittleController');
         dd($ct->minTrade($crypto));
 
-        //$BotAdminPriceTelegram = 'App\Http\Controllers\Telegram\Admin\AdminPriceController';
-        //$priceUsdt = app($BotAdminPriceTelegram)->priceUsdt();
-        //dd($priceUsdt);
+
 
 
        try {

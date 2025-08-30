@@ -163,6 +163,66 @@
                                 </b-tab>
                             </b-tabs>
                         </b-tab>
+                        <b-tab title="وبسایت web">
+                            <template #title>
+                                <img src="@/assets/images/icons/google-chrome.png" width="30px">
+                                <span class="font-weight-bold">وبسایت web</span>
+                            </template>
+                            <b-tabs>
+                                <b-tab :title="$t(key)" :active="key === 'website'" v-for="(key) in listStoreWebsite">
+                                    <p class="mb-0 mt-2">وضعیت آپدیت:</p>
+                                    <div class="demo-inline-spacing w-50">
+                                        <b-form-radio
+                                            v-model="formData.application.update[key].status"
+                                            :name="'status'+key"
+                                            value="true"
+                                            class="custom-control-warning mt-0"
+                                        >
+                                            فعال
+                                        </b-form-radio>
+                                        <b-form-radio
+                                            v-model="formData.application.update[key].status"
+                                            :name="'status'+key"
+                                            value="false"
+                                            class="custom-control-primary mt-0"
+                                        >
+                                            غیرفعال
+                                        </b-form-radio>
+                                    </div>
+                                    <b-row class="mt-2" :class="formData.application.update[key].status === 'false'?'disable-block':''">
+                                        <b-col cols="4">
+                                            <validation-provider #default="{ errors }" rules="required|between:0,30000">
+                                                <b-form-group label="ورژن کد">
+                                                    <b-form-input dir="ltr" class="text-center"
+                                                                  v-model="formData.application.update[key].version_code"
+                                                                  :state="errors.length > 0 ? false:null"
+                                                                  placeholder="ورژن کد"
+                                                    />
+                                                </b-form-group>
+                                            </validation-provider>
+                                        </b-col>
+                                        <b-col cols="4">
+                                            <validation-provider #default="{ errors }">
+                                                <b-form-group label="وضعیت اجباری">
+                                                    <b-form-select
+                                                        v-model="formData.application.update[key].reqiuard"
+                                                        :options="[{'text':'اجباری باشد','value':'true'},{'text':'اختیاری باشد','value':'false'}]"
+                                                        :state="errors.length > 0 ? false:null"
+                                                    />
+                                                </b-form-group>
+                                            </validation-provider>
+                                        </b-col>
+                                        <b-col cols="12" class="mt-2">
+                                            <b-tabs>
+                                                <b-tab :title="lang.name" v-for="lang in getGeneralInfo.locales">
+                                                    <vue-editor dir="ltr" v-model="formData.application.update[key].change_item_message[lang.symbol]"></vue-editor>
+                                                </b-tab>
+                                            </b-tabs>
+                                        </b-col>
+                                    </b-row>
+                                </b-tab>
+                            </b-tabs>
+                        </b-tab>
                     </b-tabs>
 
                 </b-card>
@@ -244,6 +304,11 @@
               return  Object.keys(this.formData.application.update).filter((key) =>{
                   return this.formData.application.update[key].os === 'ios';
               } );
+          },
+          listStoreWebsite(){
+            return  Object.keys(this.formData.application.update).filter((key) =>{
+                return this.formData.application.update[key].os === 'website';
+            } );
           }
         },
         methods:{
