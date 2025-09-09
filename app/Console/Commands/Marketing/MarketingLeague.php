@@ -48,6 +48,7 @@ class MarketingLeague extends Command
      */
     public function handle()
     {
+        return;
         $reward = [
             ['id_crypto' => 5, 'amount' => 20],
             ['id_crypto' => 5, 'amount' => 10],
@@ -115,6 +116,8 @@ class MarketingLeague extends Command
 
         // گرفتن سه نفر اول با مجموع خرید بالاتر از صفر
         $top3 = $rankedUsers->filter(fn($item) => $item->total_amount > 0)->take(3);
+
+        //dd($top3);
 
         // پرداخت جوایز
         foreach ($top3 as $key => $entry) {
