@@ -58,7 +58,7 @@ class Kernel extends ConsoleKernel
         $schedule->call(function () use($BotAdminPriceTelegram){
             $priceUsdt = app($BotAdminPriceTelegram)->priceUsdt();
             $priceDifference = app($BotAdminPriceTelegram)->priceDifference();
-        })->everyTwoMinutes();
+        })->everyTenMinutes();
 
         $schedule->call(function (){
             $little = new \App\Http\Controllers\Settings\CryptoLittleController();

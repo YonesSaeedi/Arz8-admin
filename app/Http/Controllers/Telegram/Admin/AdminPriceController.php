@@ -22,7 +22,7 @@ class AdminPriceController
         $response = Http::get('https://apiv2.nobitex.ir/v3/orderbook/USDTIRT');
         $result = (object)$response->throw()->json();
         if (isset($result->status) && $result->status == 'ok')
-            $price_usdt_toman = round($result['lastTradePrice'] / 10);
+            $price_usdt_toman = round($result->lastTradePrice / 10);
 
        /* $response = Http::get('https://azapi.ok-ex.io/oapi/v1/market/ticker?symbol=USDT-IRT');
         $result = (object)$response->json();

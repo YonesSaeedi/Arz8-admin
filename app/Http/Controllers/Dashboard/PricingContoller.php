@@ -170,9 +170,9 @@ class PricingContoller extends ExchangeApi
 
     function test()
     {
-       /* $BotAdminTelegram = 'App\Http\Controllers\Telegram\Admin\AdminController';
-        $coin360 = app($BotAdminTelegram)->coin360();
-        dd(111,$coin360);*/
+        $BotAdminTelegram = 'App\Http\Controllers\Telegram\Admin\AdminPriceController';
+        $coin360 = app($BotAdminTelegram)->priceUsdt();
+        dd(111,$coin360);
 
 
         $t = Cache::get('general_cryptocurrency');
