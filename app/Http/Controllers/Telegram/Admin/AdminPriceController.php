@@ -19,21 +19,15 @@ class AdminPriceController
     function priceUsdt(){
         $setting = Settings::where('name','last10MinPrice')->first();
 
-      /*  $response = Http::post('https://api.nobitex.ir/market/stats', ['srcCurrency'=>'usdt','dstCurrency'=>'rls']);
+        $response = Http::get('https://apiv2.nobitex.ir/v3/orderbook/USDTIRT');
         $result = (object)$response->throw()->json();
         if (isset($result->status) && $result->status == 'ok')
-            $price_usdt_toman = round($result->stats['usdt-rls']['latest'] / 10);*/
+            $price_usdt_toman = round($result['lastTradePrice'] / 10);
 
        /* $response = Http::get('https://azapi.ok-ex.io/oapi/v1/market/ticker?symbol=USDT-IRT');
         $result = (object)$response->json();
         if (isset($result->code) && $result->code == 100)
             $price_usdt_toman = $result->ticker['last'];*/
-
-        $response = Http::get('https://api.tetherland.com/currencies');
-        $result = ($response->throw()->body());
-        $result = json_decode($result);
-        if (isset($result->status) && $result->status == 200)
-            $price_usdt_toman = $result->data->currencies->USDT->price;
 
         $color = ($setting->value > $price_usdt_toman)?'🔴':'🟢';
         $color2 = ($setting->value > $price_usdt_toman)?'🟥':'🟩';
