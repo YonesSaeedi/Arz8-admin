@@ -33,16 +33,40 @@ jobs:
 
           cd ${TARGET_DIR}
           git reset --hard HEAD
+          git fetch --all
+          git checkout ${GITHUB_REF##*/}
           git pull origin ${GITHUB_REF##*/}
-          /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
+
+          # نصب dependencies
+          /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
+
+          # clear cache and optimize
           /usr/local/php82/bin/php82 artisan optimize:clear
           /usr/local/php82/bin/php82 artisan config:cache
           /usr/local/php82/bin/php82 artisan route:cache
           /usr/local/php82/bin/php82 artisan view:cache
-          /usr/local/php82/bin/php82 artisan event:cache
 
+          # migrate database (if needed)
+          /usr/local/php82/bin/php82 artisan migrate --force
+
+          # set permissions
+          chmod -R 755 storage bootstrap/cache
           chown -R cp38729:cp38729 ${TARGET_DIR}
-          chmod -R 755 ${TARGET_DIR}
+
+          # reload PHP-FPM if accessible
+          sudo -S systemctl reload php-fpm 2>/dev/null || true
+          "
+
+      - name: Verify Deployment
+        run: |
+          ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
+            cd /home/cp38729/domains/arz8x.com/saeedi-admin
+            echo 'Current branch:'
+            git branch --show-current
+            echo 'Last commit:'
+            git log -1 --oneline
+            echo 'App status:'
+            /usr/local/php82/bin/php82 artisan --version
           "
 
   build_frontend:
