@@ -30,7 +30,9 @@ jobs:
             chmod +x /usr/local/bin/composer
           fi
 
-          cd ${TARGET_DIR}
+          cd ${TARGET_DIR} || exit 1
+
+          # Sync exactly with remote branch
           git fetch origin
           git reset --hard origin/${GITHUB_REF##*/}
           git clean -fd
@@ -41,8 +43,21 @@ jobs:
           echo '✅ آخرین commit روی سرور:'
           git log -1 --oneline
 
-          chown -R cp38729:cp38729 ${TARGET_DIR}/{app,bootstrap,config,database,public,resources,routes,storage}
-          chmod -R 755 ${TARGET_DIR}/{app,bootstrap,config,database,public,resources,routes,storage}"
+          # ---- تنظیم مالکیت و مجوزها (ایمن) ----
+          # فقط پوشه‌های runtime را تغییر بده، از دست زدن به .git خودداری کن
+          # خطاها را سرکوب می‌کنیم تا job fail نشود در صورتی که مجوز کافی وجود نداشته باشد.
+          chown -R cp38729:cp38729 public storage bootstrap/cache 2>/dev/null || true
+
+          # دایرکتوری‌ها 755 و فایل‌ها 644 (برای public/storage/bootstrap/cache)
+          find public storage bootstrap/cache -type d -exec chmod 755 {} + 2>/dev/null || true
+          find public storage bootstrap/cache -type f -exec chmod 644 {} + 2>/dev/null || true
+
+          # storage و cache باید قابل نوشتن باشند برای وب‌سرور
+          chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
+          # ---------------------------------------
+
+          "
+  
 
 
   build_frontend:
