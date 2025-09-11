@@ -41,9 +41,8 @@ jobs:
           echo '✅ آخرین commit روی سرور:'
           git log -1 --oneline
 
-          chown -R cp38729:cp38729 ${TARGET_DIR}
-          chmod -R 755 ${TARGET_DIR}
-          "
+          chown -R cp38729:cp38729 ${TARGET_DIR}/{app,bootstrap,config,database,public,resources,routes,storage}
+          chmod -R 755 ${TARGET_DIR}/{app,bootstrap,config,database,public,resources,routes,storage}"
 
 
   build_frontend:
