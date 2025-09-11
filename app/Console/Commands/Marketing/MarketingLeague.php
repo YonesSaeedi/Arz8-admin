@@ -48,7 +48,6 @@ class MarketingLeague extends Command
      */
     public function handle()
     {
-        return;
         $reward = [
             ['id_crypto' => 5, 'amount' => 20],
             ['id_crypto' => 5, 'amount' => 10],

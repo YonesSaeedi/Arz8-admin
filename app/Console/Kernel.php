@@ -71,7 +71,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('wallet:getAddress')->dailyAt('19:30');
 
         // Marketing
-        $schedule->command('marketing:league')->dailyAt('00:01');
+        //$schedule->command('marketing:league')->dailyAt('00:01');
     }
 
     /**
