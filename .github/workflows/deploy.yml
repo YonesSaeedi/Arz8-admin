@@ -11,64 +11,137 @@ jobs:
     name: Deploy Laravel Backend
     runs-on: ubuntu-latest
     if: contains(github.event.head_commit.message, '[backend]') || !contains(github.event.head_commit.message, '[frontend]')
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # دریافت تمام history برای بررسی تغییرات
 
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.5.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Check Server Connection
+        run: |
+          echo "Testing SSH connection..."
+          ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
+            echo '=== SERVER INFO ==='
+            echo 'Server time: $(date)'
+            echo 'Current user: $(whoami)'
+            echo 'PHP version:'
+            /usr/local/php82/bin/php82 --version
+            echo 'Composer version:'
+            /usr/local/bin/composer --version 2>/dev/null || echo 'Composer not installed'
+            echo 'Target directory:'
+            ls -ld /home/cp38729/domains/arz8x.com/saeedi-admin 2>/dev/null || echo 'Directory does not exist'
+          "
+
       - name: Deploy Laravel
         run: |
           TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
+          CURRENT_BRANCH="${GITHUB_REF##*/}"
+
+          echo "Deploying branch: $CURRENT_BRANCH to $TARGET_DIR"
+
           ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
-          # نصب خودکار کامپوزر اگر وجود نداشته باشد
-          if [ ! -f /usr/local/bin/composer ]; then
-          curl -sS https://getcomposer.org/installer | /usr/local/php82/bin/php82
-          mv composer.phar /usr/local/bin/composer
-          chmod +x /usr/local/bin/composer
-          fi
+            # نصب کامپوزر اگر وجود ندارد
+            if ! command -v composer &> /dev/null; then
+              echo 'Installing Composer...'
+              curl -sS https://getcomposer.org/installer | /usr/local/php82/bin/php82
+              mv composer.phar /usr/local/bin/composer
+              chmod +x /usr/local/bin/composer
+            fi
 
-          cd ${TARGET_DIR}
-          git reset --hard HEAD
-          git fetch --all
-          git checkout ${GITHUB_REF##*/}
-          git pull origin ${GITHUB_REF##*/}
+            # اطمینان از وجود دایرکتوری
+            if [ ! -d '$TARGET_DIR' ]; then
+              echo 'Creating target directory...'
+              mkdir -p '$TARGET_DIR'
+            fi
 
-          # نصب dependencies
-          /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
+            cd '$TARGET_DIR'
 
-          # clear cache and optimize
-          /usr/local/php82/bin/php82 artisan optimize:clear
-          /usr/local/php82/bin/php82 artisan config:cache
-          /usr/local/php82/bin/php82 artisan route:cache
-          /usr/local/php82/bin/php82 artisan view:cache
+            # بررسی اینکه آیا این یک ریپو git است
+            if [ ! -d .git ]; then
+              echo 'Initializing git repository...'
+              git init
+              git remote add origin https://github.com/${{ github.repository }}.git
+            fi
 
-          # migrate database (if needed)
-          /usr/local/php82/bin/php82 artisan migrate --force
+            # تنظیمات git
+            git config --global --add safe.directory '$TARGET_DIR'
+            git config user.name 'GitHub Actions'
+            git config user.email 'actions@github.com'
 
-          # set permissions
-          chmod -R 755 storage bootstrap/cache
-          chown -R cp38729:cp38729 ${TARGET_DIR}
+            # دریافت تغییرات
+            echo 'Fetching latest changes...'
+            git fetch origin --force
+            echo 'Checking out branch...'
+            git checkout --force '$CURRENT_BRANCH'
+            echo 'Resetting to origin...'
+            git reset --hard origin/'$CURRENT_BRANCH'
+            echo 'Pulling latest changes...'
+            git pull origin '$CURRENT_BRANCH' --force
 
-          # reload PHP-FPM if accessible
-          sudo -S systemctl reload php-fpm 2>/dev/null || true
+            # نصب dependencies
+            echo 'Installing Composer dependencies...'
+            /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+            # پاکسازی کش‌ها
+            echo 'Clearing caches...'
+            /usr/local/php82/bin/php82 artisan optimize:clear
+            /usr/local/php82/bin/php82 artisan cache:clear
+            /usr/local/php82/bin/php82 artisan config:clear
+            /usr/local/php82/bin/php82 artisan route:clear
+            /usr/local/php82/bin/php82 artisan view:clear
+
+            # بازسازی کش‌ها
+            echo 'Caching configurations...'
+            /usr/local/php82/bin/php82 artisan config:cache
+            /usr/local/php82/bin/php82 artisan route:cache
+            /usr/local/php82/bin/php82 artisan view:cache
+
+            # migrate دیتابیس
+            echo 'Running migrations...'
+            /usr/local/php82/bin/php82 artisan migrate --force
+
+            # ایجاد لینک storage
+            if [ ! -L "public/storage" ]; then
+              echo 'Creating storage link...'
+              /usr/local/php82/bin/php82 artisan storage:link
+            fi
+
+            # تنظیم permissions
+            echo 'Setting permissions...'
+            chmod -R 755 storage bootstrap/cache public
+            chown -R cp38729:cp38729 '$TARGET_DIR'
+
+            # restart سرویس PHP (اگر ممکن است)
+            sudo -S systemctl reload php-fpm 2>/dev/null || echo 'PHP-FPM reload skipped (no permissions)'
+
+            echo 'Deployment completed successfully!'
           "
 
       - name: Verify Deployment
         run: |
+          TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
           ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
-            cd /home/cp38729/domains/arz8x.com/saeedi-admin
+            cd '$TARGET_DIR'
+            echo '=== DEPLOYMENT VERIFICATION ==='
             echo 'Current branch:'
             git branch --show-current
             echo 'Last commit:'
             git log -1 --oneline
-            echo 'App status:'
+            echo 'Git status:'
+            git status --short
+            echo 'File modification times:'
+            ls -la --full-time | head -10
+            echo 'Environment:'
+            /usr/local/php82/bin/php82 artisan env
+            echo 'App version:'
             /usr/local/php82/bin/php82 artisan --version
           "
-
   build_frontend:
     name: Build & Deploy Vue 2
     runs-on: ubuntu-latest
