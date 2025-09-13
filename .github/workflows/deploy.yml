@@ -19,36 +19,26 @@ jobs:
         uses: webfactory/ssh-agent@v0.5.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       - name: Deploy Laravel
         run: |
           TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
           ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
-            set -e  # اگر هر دستور خطا داد، script متوقف شود
-
             cd ${TARGET_DIR} || exit 1
 
-            echo '🔄 Fetching latest code from origin/main'
             git fetch origin
-
-            echo '🔄 Resetting local branch to match origin/main'
             git reset --hard origin/main
-
-            echo '🔄 Cleaning untracked files'
             git clean -fd
 
-            echo '📦 Installing composer dependencies'
             /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
-
-            echo '🧹 Clearing Laravel caches'
             /usr/local/php82/bin/php82 artisan optimize:clear
 
-            echo '🔑 Setting safe permissions'
             chown -R cp38729:cp38729 public storage bootstrap/cache 2>/dev/null || true
             find public storage bootstrap/cache -type d -exec chmod 755 {} + 2>/dev/null || true
             find public storage bootstrap/cache -type f -exec chmod 644 {} + 2>/dev/null || true
             chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
 
-            echo '⚡ Restarting PHP-FPM to clear OPcache'
+            # ریستارت php-fpm برای پاک شدن OPcache
             sudo systemctl restart php82-php-fpm 2>/dev/null || sudo systemctl restart php-fpm 2>/dev/null || sudo service php-fpm restart 2>/dev/null || true
 
             echo '✅ آخرین commit روی سرور:'
