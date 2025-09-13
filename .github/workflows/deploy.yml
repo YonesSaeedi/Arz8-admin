@@ -27,7 +27,7 @@ jobs:
             cd ${TARGET_DIR} || exit 1
 
             git fetch origin
-            git reset --hard origin/main
+            git switch -C main origin/main
             git clean -fd
 
             /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
