@@ -430,7 +430,7 @@
 
                         if (viaWithdraw === 'baje') {
                             var bajeAccount = document.getElementById("bajeAccountSelect").value;
-                            if (!bajeAccountId) {
+                            if (!bajeAccount) {
                                 this.$toast({
                                     component: ToastificationContent,
                                     props: {
