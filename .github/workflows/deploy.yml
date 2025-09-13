@@ -26,34 +26,25 @@ jobs:
           ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
             cd ${TARGET_DIR} || exit 1
 
-            # نصب Composer اگر موجود نیست
-            if [ ! -f /usr/local/bin/composer ]; then
-              curl -sS https://getcomposer.org/installer | /usr/local/php82/bin/php82
-              mv composer.phar /usr/local/bin/composer
-              chmod +x /usr/local/bin/composer
-            fi
-
-            # Sync دقیق با remote
             git fetch origin
             git reset --hard origin/main
             git clean -fd
 
-            # نصب dependencies
             /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
             /usr/local/php82/bin/php82 artisan optimize:clear
 
-            echo '✅ آخرین commit روی سرور:'
-            git log -1 --oneline
-
-            # Permissions امن (فقط پوشه‌های runtime)
             chown -R cp38729:cp38729 public storage bootstrap/cache 2>/dev/null || true
             find public storage bootstrap/cache -type d -exec chmod 755 {} + 2>/dev/null || true
             find public storage bootstrap/cache -type f -exec chmod 644 {} + 2>/dev/null || true
             chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
 
-            # ریستارت php-fpm برای پاک کردن OPcache (اگر دسترسی داشته باشی)
+            # ریستارت php-fpm برای پاک شدن OPcache
             sudo systemctl restart php82-php-fpm 2>/dev/null || sudo systemctl restart php-fpm 2>/dev/null || sudo service php-fpm restart 2>/dev/null || true
+
+            echo '✅ آخرین commit روی سرور:'
+            git log -1 --oneline
           "
+
 
   build_frontend:
     name: Build & Deploy Vue 2
