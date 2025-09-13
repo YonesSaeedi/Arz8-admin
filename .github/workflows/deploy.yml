@@ -24,47 +24,41 @@ jobs:
         run: |
           TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
           ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
-          if [ ! -f /usr/local/bin/composer ]; then
-            curl -sS https://getcomposer.org/installer | /usr/local/php82/bin/php82
-            mv composer.phar /usr/local/bin/composer
-            chmod +x /usr/local/bin/composer
-          fi
+            cd ${TARGET_DIR} || exit 1
 
-          cd ${TARGET_DIR} || exit 1
+            # نصب Composer اگر موجود نیست
+            if [ ! -f /usr/local/bin/composer ]; then
+              curl -sS https://getcomposer.org/installer | /usr/local/php82/bin/php82
+              mv composer.phar /usr/local/bin/composer
+              chmod +x /usr/local/bin/composer
+            fi
 
-          # Sync exactly with remote branch
-          git fetch origin
-          git reset --hard origin/${GITHUB_REF##*/}
-          git clean -fd
+            # Sync دقیق با remote
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
 
-          /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
-          /usr/local/php82/bin/php82 artisan optimize:clear
+            # نصب dependencies
+            /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
+            /usr/local/php82/bin/php82 artisan optimize:clear
 
-          echo '✅ آخرین commit روی سرور:'
-          git log -1 --oneline
+            echo '✅ آخرین commit روی سرور:'
+            git log -1 --oneline
 
-          # ---- تنظیم مالکیت و مجوزها (ایمن) ----
-          # فقط پوشه‌های runtime را تغییر بده، از دست زدن به .git خودداری کن
-          # خطاها را سرکوب می‌کنیم تا job fail نشود در صورتی که مجوز کافی وجود نداشته باشد.
-          chown -R cp38729:cp38729 public storage bootstrap/cache 2>/dev/null || true
+            # Permissions امن (فقط پوشه‌های runtime)
+            chown -R cp38729:cp38729 public storage bootstrap/cache 2>/dev/null || true
+            find public storage bootstrap/cache -type d -exec chmod 755 {} + 2>/dev/null || true
+            find public storage bootstrap/cache -type f -exec chmod 644 {} + 2>/dev/null || true
+            chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
 
-          # دایرکتوری‌ها 755 و فایل‌ها 644 (برای public/storage/bootstrap/cache)
-          find public storage bootstrap/cache -type d -exec chmod 755 {} + 2>/dev/null || true
-          find public storage bootstrap/cache -type f -exec chmod 644 {} + 2>/dev/null || true
-
-          # storage و cache باید قابل نوشتن باشند برای وب‌سرور
-          chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
-          # ---------------------------------------
-
+            # ریستارت php-fpm برای پاک کردن OPcache (اگر دسترسی داشته باشی)
+            sudo systemctl restart php82-php-fpm 2>/dev/null || sudo systemctl restart php-fpm 2>/dev/null || sudo service php-fpm restart 2>/dev/null || true
           "
-
-
 
   build_frontend:
     name: Build & Deploy Vue 2
     runs-on: ubuntu-latest
     if: contains(github.event.head_commit.message, '[frontend]') || !contains(github.event.head_commit.message, '[backend]')
-
     steps:
       - uses: actions/checkout@v3
 
@@ -91,23 +85,20 @@ jobs:
       - name: Build production assets
         run: npm run prod
 
-      - name: Verify built assets
-        run: |
-          ls -la public/js/
-          ls -la public/css/
-
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.5.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Clean remote directory
+      - name: Deploy frontend assets
         run: |
           ssh -p 3031 -o StrictHostKeyChecking=no root@65.21.239.21 "
-            find /home/cp38729/domains/arz8x.com/admin/ -mindepth 1 ! -name 'index.php' -delete &&
+            # پاکسازی فولدرهای قبلی
+            rm -rf /home/cp38729/domains/arz8x.com/admin/*
             rm -rf /home/cp38729/domains/arz8x.com/saeedi-admin/frontend/*
-          "
 
+            # آپلود جدید فایل‌ها
+          "
       - name: Upload built assets
         uses: appleboy/scp-action@v0.1.4
         with:
