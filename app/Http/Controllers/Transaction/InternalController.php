@@ -245,7 +245,7 @@ class InternalController extends Controller
                 if($bajeAccount != null){
                     $data = json_decode($TraInternal->data);
                     $data->baje_account = $bajeAccount;
-                    $TraInternal->data = json_encode($TraInternal->data);
+                    $TraInternal->data = json_encode($data);
                     $TraInternal->save();
                 }
                 $result = self::automaticDeposit($TraInternal->id,$viaWithdraw,$user);
