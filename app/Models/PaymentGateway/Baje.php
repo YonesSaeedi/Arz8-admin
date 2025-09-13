@@ -66,13 +66,11 @@ class Baje
     }
 
 
-    function listDeposit(){
+    function listDeposit($accountId){
         $Zibal = PaymentGateway::where('name','baje')->first();
-        $dataZibal = json_decode($Zibal->data);
-
         $fromDate = Carbon::now()->subHours(48)->toIso8601String();
         $params = array(
-            'accountId' => $dataZibal->accountId,
+            'accountId' => $accountId,
             'paymentId' => null,
             'page' => 1,
             'size' => 100,

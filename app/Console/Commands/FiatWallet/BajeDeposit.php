@@ -50,12 +50,18 @@ class BajeDeposit extends Command
     public function handle()
     {
         $baje = new Baje();
-        $listDeposit = $baje->listDeposit();
-
+        $Zibal = PaymentGateway::where('name','baje')->first();
+        $dataZibal = json_decode($Zibal->data);
+        $listDeposit = [];
+        foreach ($dataZibal->account as $account) {
+            $deposits = $baje->listDeposit($account->accountId);
+            if (is_array($deposits)) {
+                $listDeposit = array_merge($listDeposit, $deposits);
+            }
+        }
 
         if (count($listDeposit) > 0) {
             $ctr = new Controller();
-
 
             foreach ($listDeposit as &$transaction) {
                 $sourceIban = $transaction['sourceIban'];
