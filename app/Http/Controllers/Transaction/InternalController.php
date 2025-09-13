@@ -300,7 +300,7 @@ class InternalController extends Controller
             }elseif ($gatewayWithdraw == 'baje'){
                 $baje = new \App\Models\PaymentGateway\Baje();
                 $data = json_decode($TraInternal->data);
-                $result = $baje->withdraw($TraInternal->amount,$iban,$id_last,null,null,null,$data->baje_account);
+                $result = $baje->withdraw($TraInternal->amount,$iban,$id_last,'تسویه کاربر',null,null,$data->baje_account);
             }
 
             if ($result->status == true) {

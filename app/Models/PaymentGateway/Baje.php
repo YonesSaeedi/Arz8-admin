@@ -32,9 +32,8 @@ class Baje
             $bajeAccounts = (array)$dataZibal->account;
             $names = array_column($bajeAccounts, 'accountName'); // فقط ستون اسم‌ها
             $index = array_search($baje_account, $names); // پیدا کردن ایندکس اسم مورد نظر
-
             if ($index !== false) {
-                $accountId = $bajeAccounts[$index]['accountId'];
+                $accountId = $bajeAccounts[$index]->accountId;
             } else {
                 $accountId = $dataZibal->accountId;
             }
@@ -60,6 +59,7 @@ class Baje
         if (isset($response->result) && $response->result == 1) {
             $result = array('status' => true,'msg' => 'واریز به صورت پایا انجام شد','response'=>$response);
         }else{
+            dd($response);
             $result = array('status' => false,'msg' => ($response->message),'response'=>$response);
         }
         return (object)$result;
