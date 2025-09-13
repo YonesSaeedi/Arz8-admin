@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 
 class Baje
 {
-    function withdraw($amount,$Iban,$id_last,$description = 'تسویه کاربر',$model = null,$wageStatus = true){
+    function withdraw($amount,$Iban,$id_last,$description = 'تسویه کاربر',$model = null,$wageStatus = true,$baje_account = null){
         $Zibal = PaymentGateway::where('name','baje')->first();
         $dataZibal = json_decode($Zibal->data);
 
@@ -26,11 +26,24 @@ class Baje
 
             $amount = $amount - $wage;
         }
+        if($baje_account == null)
+            $accountId = $dataZibal->accountId;
+        else{
+            $bajeAccounts = (array)$dataZibal->account;
+            $names = array_column($bajeAccounts, 'accountName'); // فقط ستون اسم‌ها
+            $index = array_search($baje_account, $names); // پیدا کردن ایندکس اسم مورد نظر
+
+            if ($index !== false) {
+                $accountId = $bajeAccounts[$index]['accountId'];
+            } else {
+                $accountId = $dataZibal->accountId;
+            }
+        }
 
         $params = array(
             'amount' => round($amount*10), //Rial
             'iban' => 'IR'.$Iban,
-            'accountId' => $dataZibal->accountId,
+            'accountId' => $accountId,
             'delay' => $model,
             'uniqueCode' => $id_last,
             'description' => $description,

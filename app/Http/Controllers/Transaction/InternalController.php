@@ -182,9 +182,9 @@ class InternalController extends Controller
         //return response()->json(array('status'=>true ,'msg'=>'', 'internal'=> $internal));
 
 
-        $gateway_withdraw = PaymentGateway::select('id','name')->where('withdraw',1)->get();
+        $baje = PaymentGateway::select('data')->where('name','baje')->first()->data;
         $admin_hesab = AdminHesab::select('id','name','stock')->where('id_admin',\Auth::user()->id)->get();
-        return response()->json(array('status'=>true ,'msg'=>'', 'internal'=> $internal,'gateway_withdraw'=>$gateway_withdraw,'admin_hesab'=>$admin_hesab));
+        return response()->json(array('status'=>true ,'msg'=>'', 'internal'=> $internal,'baje'=>json_decode($baje)->account,'admin_hesab'=>$admin_hesab));
     }
 
     function confirmInternal(Request $request){
@@ -194,7 +194,7 @@ class InternalController extends Controller
         if(isset($data->receipt_payment) && $TraInternal->type == 'deposit') {
            $result = self::confirmReceipt($TraInternal,$user,$request->amount);
         }else{
-            $result = self::confirmWithdraw($TraInternal,$user,$request->ip(),$request->viaWithdraw);
+            $result = self::confirmWithdraw($TraInternal,$user,$request->ip(),$request->viaWithdraw,$request->bajeAccount);
         }
         return  response()->json($result);
     }
@@ -237,11 +237,17 @@ class InternalController extends Controller
         }
     }
 
-    function confirmWithdraw($TraInternal,$user,$ip = null,$viaWithdraw = 'manual'){
+    function confirmWithdraw($TraInternal,$user,$ip = null,$viaWithdraw = 'manual',$bajeAccount = null){
         DB::beginTransaction();
         try {
 
             if ($viaWithdraw != 'manual'){
+                if($bajeAccount != null){
+                    $data = json_decode($TraInternal->data);
+                    $data->baje_account = $bajeAccount;
+                    $TraInternal->data = json_encode($TraInternal->data);
+                    $TraInternal->save();
+                }
                 $result = self::automaticDeposit($TraInternal->id,$viaWithdraw,$user);
             }else{
                 $TraInternal->status = 'success';
@@ -293,7 +299,8 @@ class InternalController extends Controller
                 $result = $jibimo->withdraw($TraInternal,$iban);
             }elseif ($gatewayWithdraw == 'baje'){
                 $baje = new \App\Models\PaymentGateway\Baje();
-                $result = $baje->withdraw($TraInternal->amount,$iban,$id_last);
+                $data = json_decode($TraInternal->data);
+                $result = $baje->withdraw($TraInternal->amount,$iban,$id_last,null,null,null,$data->baje_account);
             }
 
             if ($result->status == true) {
