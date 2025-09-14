@@ -544,11 +544,30 @@ import {
                         '<select id="viaWithdraw" required class="swal2-input">'+
                         '<option value="" disabled hidden selected>نحوه واریز را انتخاب کنید</option>'+
                         this.getOptionsGatewayWithdraw()+
-                        '</select>',
+                        '</select><div id="bajeContainer"></div>',
                     icon: 'question',
                     showCancelButton: true,
                     showLoaderOnConfirm: true,
                     buttonsStyling: false,
+                    didOpen: () => {
+                        const viaSelect = document.getElementById("viaWithdraw");
+                        viaSelect.addEventListener("change", (e) => {
+                            if (e.target.value === "baje") {
+                                let options = this.getGeneralInfo.bajeAccount.map(acc =>
+                                    `<option value="${acc.accountName}">${acc.accountName}</option>`
+                                ).join("");
+
+                                document.getElementById("bajeContainer").innerHTML = `
+                                    <select id="bajeAccountSelect" required class="swal2-input">
+                                        <option value="" disabled hidden selected>انتخاب حساب باجه</option>
+                                        ${options}
+                                    </select>
+                                `;
+                            } else {
+                                document.getElementById("bajeContainer").innerHTML = "";
+                            }
+                        });
+                    },
                     preConfirm: () => {
                         var viaWithdraw = document.getElementById("viaWithdraw").value;
                         if(viaWithdraw == ''){
@@ -558,7 +577,27 @@ import {
                             })
                             return false;
                         }
-                        return  axiosIns.post('internal/confirm/group',{ids:this.itemIds,viaWithdraw:viaWithdraw})
+                        if (viaWithdraw === 'baje') {
+                            var bajeAccount = document.getElementById("bajeAccountSelect").value;
+                            if (!bajeAccount) {
+                                this.$toast({
+                                    component: ToastificationContent,
+                                    props: {
+                                        title: 'انتخاب حساب',
+                                        text: 'لطفاً یک حساب باجه انتخاب کنید',
+                                        icon: 'AlertTriangleIcon',
+                                        variant: 'warning',
+                                    },
+                                });
+                                return false;
+                            }
+                        }
+
+                        return axiosIns.post('internal/confirm/group',{
+                                ids: this.itemIds,
+                                viaWithdraw: viaWithdraw,
+                                bajeAccount: bajeAccount
+                            })
                             .then(response => {
                                 return response;
                             })

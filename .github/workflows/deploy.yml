@@ -26,9 +26,16 @@ jobs:
           ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
             cd ${TARGET_DIR} || exit 1
 
+            set -e  # اگر خطا داشت همونجا stop بشه
+            echo "🔄 Fetching origin..."
             git fetch origin
-            git switch -C main origin/main
+
+            echo "🔄 Resetting main to origin/main..."
+            git checkout -B main origin/main
+
+            echo "🧹 Cleaning untracked files..."
             git clean -fd
+
 
             /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
             /usr/local/php82/bin/php82 artisan optimize:clear

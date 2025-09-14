@@ -290,7 +290,6 @@
                 visibleReceipt: false,
                 receipt: false,
                 srcFile: null,
-                bajeAccount:null,
                 adminHesab:null,
 
                 modalInquiryReceipt:false,
@@ -403,7 +402,7 @@
                         const viaSelect = document.getElementById("viaWithdraw");
                         viaSelect.addEventListener("change", (e) => {
                             if (e.target.value === "baje") {
-                                let options = this.bajeAccount.map(acc =>
+                                let options = this.getGeneralInfo.bajeAccount.map(acc =>
                                     `<option value="${acc.accountName}">${acc.accountName}</option>`
                                 ).join("");
 

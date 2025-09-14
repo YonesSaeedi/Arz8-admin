@@ -58,6 +58,10 @@ class GeneralController extends Controller
         $result->gatewayslist = Cache::remember('ad_general_gatewayslist', now()->addDays(7), function () {
             return  \App\Models\PaymentGateway\PaymentGateway::select('name','withdraw')->get();
         });
+        $result->bajeAccount = Cache::remember('ad_general_baje_account', now()->addDays(7), function () {
+            $baje = \App\Models\PaymentGateway\PaymentGateway::select('data')->where('name','baje')->first()->data;
+            return  json_decode($baje)->account;
+        });
 
         $result->digital_icon = ['PMV'=>'perfectmoney.svg','PM'=>'perfectmoney.svg','PSV'=>'psvoucher.svg','PY'=>'payeer.svg','UUSD'=>'uusd.png'];
 

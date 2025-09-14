@@ -182,9 +182,8 @@ class InternalController extends Controller
         //return response()->json(array('status'=>true ,'msg'=>'', 'internal'=> $internal));
 
 
-        $baje = PaymentGateway::select('data')->where('name','baje')->first()->data;
         $admin_hesab = AdminHesab::select('id','name','stock')->where('id_admin',\Auth::user()->id)->get();
-        return response()->json(array('status'=>true ,'msg'=>'', 'internal'=> $internal,'baje'=>json_decode($baje)->account,'admin_hesab'=>$admin_hesab));
+        return response()->json(array('status'=>true ,'msg'=>'', 'internal'=> $internal,'admin_hesab'=>$admin_hesab));
     }
 
     function confirmInternal(Request $request){
@@ -459,7 +458,7 @@ class InternalController extends Controller
                 //if(isset($data->receipt_payment) && $internal->type == 'deposit') {
                     //self::confirmReceipt($internal,$user);
                 //}else{
-                    self::confirmWithdraw($internal,$user,$request->ip(),$request->viaWithdraw);
+                    self::confirmWithdraw($internal,$user,$request->ip(),$request->viaWithdraw,$request->bajeAccount);
                 //}
             }
             return array('status' => true, 'msg' =>'تمامی تراکنش ها به صورت دستی تایید شدند.');
