@@ -74,7 +74,7 @@ jobs:
 
       - name: Deploy frontend assets
         run: |
-          ssh -p 3031 -o StrictHostKeyChecking=no root@65.21.239.21 "
+          ssh -p 3031 -o StrictHostKeyChecking=no cp38729@65.21.239.21 "
           # فقط فایل‌های غیر از index.php پاک بشن
           find /home/cp38729/domains/arz8x.com/admin/ -mindepth 1 ! -name 'index.php' -delete
 
