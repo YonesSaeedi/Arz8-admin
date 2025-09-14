@@ -194,7 +194,7 @@ class GatewayWithdrawController extends Controller
             $result = $paystar->withdrawOpenBanking($amount,$iban,$uniqueCode,$request->name,$request->family);
         }elseif ($gatewayWithdraw == 'baje'){
             $baje = new \App\Models\PaymentGateway\Baje();
-            $result = $baje->withdraw($amount,$iban,$uniqueCode,$request->description,$request->model,false);
+            $result = $baje->withdraw($amount,$iban,$uniqueCode,$request->description,$request->model,false,$request->bajeAccount);
         }
         if($result->status){
             $money = new AutomaticDeposit;

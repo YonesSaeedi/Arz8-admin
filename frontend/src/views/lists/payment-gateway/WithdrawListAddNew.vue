@@ -61,7 +61,7 @@
                             label-for="iban"
                         >
                             <b-form-input
-                                id="name"
+                                id="iban"
                                 v-model="userData.iban"
                                 v-mask="iBanMask"
                                 autofocus
@@ -159,6 +159,43 @@
                             </b-form-invalid-feedback>
                         </b-form-group>
                     </validation-provider>
+                    <!-- Model -->
+                    <validation-provider
+                        v-if="userData.payment === 'baje'"
+                        #default="validationContext"
+                        name="bajeAccount"
+                        rules="required"
+                    >
+                        <b-form-group
+                            label="حساب واریز"
+                            label-for="bajeAccount"
+                        >
+                            <b-form-select
+                                id="bajeAccount"
+                                v-model="userData.bajeAccount"
+                                :state="getValidationState(validationContext)"
+                                autofocus
+                                trim
+                            >
+                                <!-- گزینه placeholder -->
+                                <option value="" disabled hidden selected>انتخاب حساب باجه</option>
+
+                                <!-- گزینه‌های داینامیک -->
+                                <option
+                                    v-for="acc in getGeneralInfo.bajeAccount"
+                                    :key="acc.accountId"
+                                    :value="acc.accountName"
+                                >
+                                    {{ acc.accountName }}
+                                </option>
+                            </b-form-select>
+
+                            <b-form-invalid-feedback>
+                                {{ validationContext.errors[0] }}
+                            </b-form-invalid-feedback>
+                        </b-form-group>
+                    </validation-provider>
+
 
                     <!-- name family -->
                     <validation-provider
@@ -483,6 +520,7 @@ import {
                 family: '',
                 description: 'تسویه همکار',
                 uniqueCode: '',
+                bajeAccount: '',
             }
 
             const userData = ref(JSON.parse(JSON.stringify(blankUserData)))
