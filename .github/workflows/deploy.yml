@@ -22,31 +22,18 @@ jobs:
 
       - name: Deploy Laravel
         run: |
-          TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
-          ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
-            cd ${TARGET_DIR} || exit 1
+          if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
+            TARGET_DIR="/home/payfa24/domains/payfa24.org/saeedi-admin"
+          fi
 
-            set -e
-            echo '🔄 Fetching origin...'
-            git fetch origin
-            git switch -C main origin/main
-            git clean -fd
-            git log -1 --oneline
-
-
-            /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
-            /usr/local/php82/bin/php82 artisan optimize:clear
-
-            chown -R cp38729:cp38729 public storage bootstrap/cache 2>/dev/null || true
-            find public storage bootstrap/cache -type d -exec chmod 755 {} + 2>/dev/null || true
-            find public storage bootstrap/cache -type f -exec chmod 644 {} + 2>/dev/null || true
-            chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
-
-            # ریستارت php-fpm برای پاک شدن OPcache
-            sudo systemctl restart php82-php-fpm 2>/dev/null || sudo systemctl restart php-fpm 2>/dev/null || sudo service php-fpm restart 2>/dev/null || true
-
-            echo '✅ آخرین commit روی سرور:'
-            git log -1 --oneline
+          ssh -o StrictHostKeyChecking=no -p 22 root@45.159.114.231 "
+            cd ${TARGET_DIR} &&
+            git reset --hard HEAD &&
+            git clean -fd &&
+            git pull origin ${GITHUB_REF##*/} --no-rebase &&
+            /usr/local/bin/composer install --no-dev --optimize-autoloader &&
+            /usr/local/bin/php artisan optimize:clear &&
+            sudo chown -R payfa24:payfa24 ${TARGET_DIR}
           "
 
 
