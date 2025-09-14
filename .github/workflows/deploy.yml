@@ -23,17 +23,17 @@ jobs:
       - name: Deploy Laravel
         run: |
           if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
-            TARGET_DIR="/home/payfa24/domains/payfa24.org/saeedi-admin"
+             TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
           fi
 
-          ssh -o StrictHostKeyChecking=no -p 22 root@45.159.114.231 "
+          ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
             cd ${TARGET_DIR} &&
             git reset --hard HEAD &&
             git clean -fd &&
             git pull origin ${GITHUB_REF##*/} --no-rebase &&
-            /usr/local/bin/composer install --no-dev --optimize-autoloader &&
-            /usr/local/bin/php artisan optimize:clear &&
-            sudo chown -R payfa24:payfa24 ${TARGET_DIR}
+            /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader &&
+            /usr/local/php82/bin/php82 artisan optimize:clear &&
+            sudo chown -R cp38729:cp38729 ${TARGET_DIR}
           "
 
 
