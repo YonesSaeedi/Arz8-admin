@@ -408,8 +408,8 @@
                                             <b-form-group label="قیمت گذاری بر اساس؟" label-cols-md="4">
                                                 <validation-provider #default="{ errors }">
                                                     <b-form-radio-group
-                                                        v-model="settings.price_tether_satatus"
-                                                        :options="[{'text':'قیمت تتر در تنظیمات کل','value':true},{'text':'قیمت تتر در اینجا','value':false}]"
+                                                        v-model="settings.price_usdt_satatus"
+                                                        :options="[{'text':'اتوماتیک','value':true},{'text':'قیمت دلاری ارز در اینجا','value':false}]"
                                                         class="demo-inline-spacing mt-0"
                                                         value-field="value"
                                                         text-field="text"
@@ -419,42 +419,16 @@
                                             </b-form-group>
                                         </b-col>
 
-<!--                                        <b-col cols="12">
-                                            <b-form-group label="قیمت خرید تتر" label-cols-md="4">
-                                                <validation-provider #default="{ errors }" rules="required|between:50000,100000">
-                                                    <b-form-input v-model="settings.fee_buy" placeholder="قیمت خرید" :disabled="settings.price_tether_satatus"
+                                        <b-col cols="12">
+                                            <b-form-group label="درج قیمت دلاری" label-cols-md="4">
+                                                <validation-provider #default="{ errors }" rules="required|between:0,30000">
+                                                    <b-form-input v-model="settings.price_usdt" placeholder="درج قیمت دلاری" :disabled="!settings.price_usdt_satatus"
                                                                   :state="errors.length > 0 ? false:null" class="text-center" dir="ltr"/>
                                                 </validation-provider>
                                             </b-form-group>
                                         </b-col>
 
-                                        <b-col cols="12">
-                                            <b-form-group label="قیمت فروش تتر" label-cols-md="4">
-                                                <validation-provider #default="{ errors }" rules="required|between:50000,100000">
-                                                    <b-form-input v-model="settings.fee_sell" placeholder="قیمت فروش" :disabled="settings.price_tether_satatus"
-                                                                  :state="errors.length > 0 ? false:null" class="text-center" dir="ltr"/>
-                                                </validation-provider>
-                                            </b-form-group>
-                                        </b-col>-->
 
-                                        <b-col cols="12" class="mt-3">
-                                            <b-form-group label="محاسبه درصد خرید" label-cols-md="4">
-                                                <validation-provider #default="{ errors }" rules="required|between:-5000,5000">
-                                                    <b-form-input v-model="settings.percent_buy" placeholder="درصد برای خرید" :disabled="!settings.price_tether_satatus"
-                                                                  :state="errors.length > 0 ? false:null" class="text-center" dir="ltr"/>
-                                                </validation-provider>
-                                                <small>بالای صد به تومان محاسبه میشود.</small>
-                                            </b-form-group>
-                                        </b-col>
-                                        <b-col cols="12">
-                                            <b-form-group label="محاسبه درصد فروش" label-cols-md="4">
-                                                <validation-provider #default="{ errors }" rules="required|between:-5000,5000">
-                                                    <b-form-input v-model="settings.percent_sell" placeholder="درصد برای فروش" :disabled="!settings.price_tether_satatus"
-                                                                  :state="errors.length > 0 ? false:null" class="text-center" dir="ltr"/>
-                                                </validation-provider>
-                                                <small>بالای صد به تومان محاسبه میشود.</small>
-                                            </b-form-group>
-                                        </b-col>
                                         <hr class="w-100">
 
                                         <b-col cols="12" class="mt-2">
@@ -475,9 +449,11 @@
                                                 <small>بالای صد به تومان محاسبه میشود.</small>
                                             </b-form-group>
                                         </b-col>
-                                        <hr class="w-100">
 
-                                        <b-col cols="12" class="my-2">
+
+<!--
+                                     <hr class="w-100">
+                                     <b-col cols="12" class="my-2">
                                             <b-form-group label="استعلام موجودی بر اساس؟" label-cols-md="4">
                                                 <validation-provider #default="{ errors }">
                                                     <b-form-radio-group
@@ -499,7 +475,7 @@
                                                                   :state="errors.length > 0 ? false:null" class="text-center" dir="ltr"/>
                                                 </validation-provider>
                                             </b-form-group>
-                                        </b-col>
+                                        </b-col>-->
 
                                     </b-tab>
 

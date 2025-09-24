@@ -27,8 +27,8 @@ class CryptoController extends ExchangeApi
         $this->path_logo = str_replace(env('PATH_ADMIN_PANEL'),env('PATH_PANEL'),$path);
         $this->path_logo = str_replace('sorg.ir-v3/public','app/api',$this->path_logo);
         $this->settings = array('font'=>false,'wage_buy'=> '0','wage_sell'=>'0' ,'hidden'=>false,
-                                'price_tether_satatus'=>true,'fee_buy'=>30000,'fee_sell'=>30000, 'percent_buy'=>0,'percent_sell'=>0,
-                                'stock_api'=> true, 'stock'=>0,'exchange_account'=>0);
+                                'price_usdt_satatus'=>true,'price_usdt'=>0,
+                                'exchange_account'=>0);
         parent::__construct();
     }
 
