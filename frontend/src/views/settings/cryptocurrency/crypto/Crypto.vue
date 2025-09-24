@@ -422,7 +422,7 @@
                                         <b-col cols="12">
                                             <b-form-group label="درج قیمت دلاری" label-cols-md="4">
                                                 <validation-provider #default="{ errors }" rules="required|between:0,30000">
-                                                    <b-form-input v-model="settings.price_usdt" placeholder="درج قیمت دلاری" :disabled="!settings.price_usdt_satatus"
+                                                    <b-form-input v-model="settings.price_usdt" placeholder="درج قیمت دلاری" :disabled="settings.price_usdt_satatus"
                                                                   :state="errors.length > 0 ? false:null" class="text-center" dir="ltr"/>
                                                 </validation-provider>
                                             </b-form-group>
