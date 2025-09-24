@@ -536,6 +536,7 @@ class CryptoController extends ExchangeApi
             'name' => 'required',
             'color' => 'required',
             'percent' => 'required|numeric',
+            'symbol' => 'required',
             'file' => 'nullable|mimes:svg,png|max:20500',
             'settings' => 'required',
             //'networkDefault' => 'required|numeric',
@@ -619,6 +620,7 @@ class CryptoController extends ExchangeApi
         }
 
         $crypto->name = $name;
+        $crypto->symbol = $request->symbol;
         $crypto->deposit = $request->deposit;
         $crypto->withdraw = $request->withdraw;
         $crypto->withdraw_auto = $request->withdraw_auto;

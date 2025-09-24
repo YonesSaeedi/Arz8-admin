@@ -188,14 +188,14 @@ class NotificationController extends  Controller
 
     function removeNotif(Request $request){
         $notification = Notifications::find($request->id);
-        $data = json_decode($notification->data);
-        if ((!isset($data->numUsers) && !isset($data->numSeconds)) || isset($notification->id_user)){
+        //$data = json_decode($notification->data);
+        //if ((!isset($data->numUsers) && !isset($data->numSeconds)) || isset($notification->id_user)){
             $notification->delete();
             $result = array('status' => true, 'msg' => 'با موفقیت حذف شد.');
-        }else{
+        //}else{
             //$count = count($data->idUsers) > 0 ? count($data->idUsers) : User::count();
-            $result = array('status' => false, 'msg' => 'حذف در حال حاضر امکان پذیر نیست.');
-        }
+        //    $result = array('status' => false, 'msg' => 'حذف در حال حاضر امکان پذیر نیست.');
+       // }
         return response()->json($result);
     }
 }

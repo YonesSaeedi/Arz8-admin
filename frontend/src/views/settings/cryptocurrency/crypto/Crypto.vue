@@ -191,7 +191,7 @@
                                             <b-form-group label="نماد یا سیمبل" label-cols-md="4">
                                                 <validation-provider #default="{ errors }" rules="required">
                                                     <b-form-input v-model="crypto.symbol" placeholder="نماد مانند BTC" :state="errors.length > 0 ? false:null"
-                                                                  class="text-center text-uppercase" disabled/>
+                                                                  class="text-center text-uppercase"/>
                                                 </validation-provider>
                                             </b-form-group>
                                         </b-col>
