@@ -635,6 +635,7 @@
                     {text: 'کوینکس', value: 'coinex'},
                     {text: 'بایننس', value: 'binance'},
                     {text: 'کوکوین', value: 'kucoin'},
+                    {text: 'ظرف اندک', value: 'little'},
                     {text:'صرافی موبوط به ارز را انتخاب کنید', value:null, disabled:true, hidden:true}
                 ],
                 exchangeAccountOptions: [
