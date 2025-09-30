@@ -313,7 +313,7 @@ class UsersController extends Controller
 
     function note(Request $request){
         $user = User::find($request->id);
-        $info = json_decode($user->info);
+        $info = json_decode($user->info??'{}');
         $info->note = $request->note;
         $user->info = json_encode($info);
         $user->save();
