@@ -177,28 +177,17 @@
 
                 <b-tab>
                     <template #title>
-                        <feather-icon
-                            icon="ImageIcon"
-                            size="18"
-                            class="mr-1"
-                        />
-                        <span class="font-weight-bold">استوری</span>
-                    </template>
-                    <Stories @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==14"/>
-                </b-tab>
-                <b-tab>
-                    <template #title>
                         <img :src="baseURL+'images/currency/' + iconSymbol('USDT')" width="20px" />
                         <span class="font-weight-bold ml-1">USDT1</span>
                     </template>
-                    <PSVouchers @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==15"/>
+                    <PSVouchers @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==14"/>
                 </b-tab>
                 <b-tab>
                     <template #title>
                         <img :src="baseURL+'images/currency/' + iconSymbol('USDT')" width="20px" />
                         <span class="font-weight-bold ml-1">USDT2</span>
                     </template>
-                    <Utopia @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==16"/>
+                    <Utopia @onSubmit="onSubmit" :settings="settings" v-if="settings && tabActive==15"/>
                 </b-tab>
             </b-tabs>
         </section>
@@ -226,9 +215,6 @@
     import Finnotech from "./Finnotech";
     import Application from "./Application";
     import Banner from "./Banner";
-    import Stories from "./Stories";
-    import PerfectMoney from "./digital-currency/PerfectMoney";
-    import PMvoucher from "./digital-currency/PMvoucher";
     import PSVouchers from "./digital-currency/PSVouchers";
     import Utopia from "./digital-currency/Utopia";
     import axiosIns from "@/libs/axios";
@@ -252,9 +238,6 @@
             Finnotech,
             Application,
             Banner,
-            Stories,
-            PerfectMoney,
-            PMvoucher,
             PSVouchers,
             Utopia,
 

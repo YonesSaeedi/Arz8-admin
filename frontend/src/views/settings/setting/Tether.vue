@@ -36,23 +36,29 @@
 
                     <b-row class="mt-2">
                         <b-col cols="6">
-                            <validation-provider #default="{ errors }" rules="required|between:70000,150000">
-                                <b-form-group label="قیمت خرید تتر" label-for="name">
-                                    <b-form-input dir="ltr" class="text-center" :disabled="formData.feeUsdtApi === 'true'"
-                                                  v-model="formData.feeUsdtBuy_toman"
-                                                  :state="errors.length > 0 ? false:null"
-                                                  placeholder="قیمت خرید تتر"
+                            <validation-provider #default="{ errors }">
+                                <b-form-group label="استفاده از کدام مرجع؟">
+                                    <b-form-select
+                                        :disabled="formData.feeUsdtApi !== 'true'"
+                                        v-model="formData.feeUsdtApiVia"
+                                        :options="[{'text':'نوبیتکس','value':'nobitex'},{'text':'تترلند','value':'tetherland'}]"
+                                        :state="errors.length > 0 ? false:null"
                                     />
                                 </b-form-group>
                             </validation-provider>
                         </b-col>
+
                         <b-col cols="6">
-                            <validation-provider #default="{ errors }" rules="required|between:70000,150000">
-                                <b-form-group label="قیمت فروش تتر" label-for="name">
-                                    <b-form-input dir="ltr" class="text-center" :disabled="formData.feeUsdtApi === 'true'"
-                                                  v-model="formData.feeUsdtSell_toman"
-                                                  :state="errors.length > 0 ? false:null"
-                                                  placeholder="قیمت فروش تتر"
+                            <validation-provider #default="{ errors }" rules="required|betweenFormatted:90000,170000">
+                                <b-form-group label="قیمت تتر">
+                                    <b-form-input
+                                        dir="ltr"
+                                        class="text-center"
+                                        v-model="formattedFeeUsdt"
+                                        :disabled="formData.feeUsdtApi === 'true'"
+                                        :state="errors.length > 0 ? false:null"
+                                        placeholder="قیمت تتر"
+                                        type="text"
                                     />
                                 </b-form-group>
                             </validation-provider>
@@ -60,8 +66,8 @@
 
                         <b-col cols="6" class="mt-2">
                             <validation-provider #default="{ errors }" rules="required|between:-5000,5000">
-                                <b-form-group label="محاسبه درصد یا ضریب خرید(بالای صد به تومان)" label-for="name">
-                                    <b-form-input dir="ltr" class="text-center" :disabled="formData.feeUsdtApi !== 'true'"
+                                <b-form-group label="محاسبه درصد یا ضریب خرید(بالای صد به تومان)">
+                                    <b-form-input dir="ltr" class="text-center"
                                                   v-model="formData.percentUsdtBuy"
                                                   :state="errors.length > 0 ? false:null"
                                                   placeholder="بالای 100 به تومان"
@@ -71,8 +77,8 @@
                         </b-col>
                         <b-col cols="6" class="mt-2">
                             <validation-provider #default="{ errors }" rules="required|between:-5000,5000">
-                                <b-form-group label="محاسبه درصد یا ضریب فروش(بالای صد به تومان)" label-for="name">
-                                    <b-form-input dir="ltr" class="text-center" :disabled="formData.feeUsdtApi !== 'true'"
+                                <b-form-group label="محاسبه درصد یا ضریب فروش(بالای صد به تومان)">
+                                    <b-form-input dir="ltr" class="text-center"
                                                   v-model="formData.percentUsdtSell"
                                                   :state="errors.length > 0 ? false:null"
                                                   placeholder="بالای 100 به تومان"
@@ -121,66 +127,93 @@
 </template>
 
 <script>
-    import {
-         BCard, BForm, BFormGroup, BFormInput,BFormSelect, BFormInvalidFeedback, BButton, BFormFile, BSpinner,BRow,BCol,
-        BFormRadio,
-    } from 'bootstrap-vue'
-    import {ValidationProvider, ValidationObserver} from 'vee-validate'
-    import {ref} from '@vue/composition-api'
-    import {required, alphaNum, between} from '@validations'
-    import Ripple from 'vue-ripple-directive'
-    import {MODEL_EVENT_NAME} from "bootstrap-vue/src/mixins/form-radio-check";
-    import NotAccessed from "@/views/vuexy/pages/miscellaneous/NotAccessed";
+import {
+    BCard, BForm, BFormGroup, BFormInput,BFormSelect, BFormInvalidFeedback, BButton, BFormFile, BSpinner,BRow,BCol,
+    BFormRadio,
+} from 'bootstrap-vue'
+import {ValidationProvider, ValidationObserver, extend } from 'vee-validate'
+import {ref} from '@vue/composition-api'
+import {required, alphaNum, between} from '@validations'
+import Ripple from 'vue-ripple-directive'
+import {MODEL_EVENT_NAME} from "bootstrap-vue/src/mixins/form-radio-check";
+import NotAccessed from "@/views/vuexy/pages/miscellaneous/NotAccessed";
 
-    export default {
-        props:['settings'],
-        components: {
-            BCard,
-            BForm,
-            BFormGroup,
-            BFormInput,
-            BFormInvalidFeedback,
-            BButton,
-            BFormSelect,
-            BFormFile,
-            BSpinner,
-            BRow,BCol,
-            BFormRadio,
-            NotAccessed,
-            // Form Validation
-            ValidationProvider,
-            ValidationObserver,
-        },
-        directives: {
-            Ripple,
-        },
-        data() {
-            return {
-                formData:{
-                    feeUsdtApi: null,
-                    feeUsdtBuy_toman: null,
-                    feeUsdtSell_toman: null,
-                    percentUsdtBuy: null,
-                    percentUsdtSell: null,
-                    useBalanceUserUsdt: null,
-                }
+extend('betweenFormatted', {
+    validate: (value, { min, max }) => {
+        const numericValue = String(value).replace(/,/g, '');
+        const num = Number(numericValue);
+        return num >= min && num <= max;
+    },
+    message: 'مقدار باید بین {min} و {max} باشد',
+    params: ['min', 'max']
+});
+
+export default {
+    props:['settings'],
+    components: {
+        BCard,
+        BForm,
+        BFormGroup,
+        BFormInput,
+        BFormInvalidFeedback,
+        BButton,
+        BFormSelect,
+        BFormFile,
+        BSpinner,
+        BRow,BCol,
+        BFormRadio,
+        NotAccessed,
+        // Form Validation
+        ValidationProvider,
+        ValidationObserver,
+    },
+    directives: {
+        Ripple,
+    },
+    data() {
+        return {
+            formData:{
+                feeUsdt: null,
+                feeUsdtApi: null,
+                feeUsdtApiVia: null,
+                percentUsdtBuy: null,
+                percentUsdtSell: null,
+                useBalanceUserUsdt: null,
             }
-        },
-        methods:{
-            onSubmit(){
-                this.$refs.refFormGeneralObserver.validate().then(success => {
-                    if (success) {
-                        this.$emit('onSubmit', this.formData)
-                    }
-                })
-            }
-        },
-        created() {
-            Object.keys(this.formData).map(function(key, index) {
-                this.formData[key] = this.settings[key];
-            },this)
         }
+    },
+    computed: {
+        formattedFeeUsdt: {
+            get() {
+                if (this.formData.feeUsdt) {
+                    // تبدیل عدد به فرمت سه‌رقمی جداشده
+                    return this.formData.feeUsdt.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                }
+                return '';
+            },
+            set(value) {
+                // حذف کاماها و تبدیل به عدد
+                const numericValue = value.replace(/,/g, '');
+                this.formData.feeUsdt = numericValue ? Number(numericValue) : null;
+            }
+        }
+    },
+    methods:{
+        onSubmit(){
+            this.$refs.refFormGeneralObserver.validate().then(success => {
+                if (success) {
+                    // در اینجا formData.feeUsdt حاوی عدد خالص بدون کاما است
+                    this.$emit('onSubmit', this.formData)
+                }
+            })
+        }
+    },
+    created() {
+        Object.keys(this.formData).map(function(key, index) {
+            this.formData[key] = this.settings[key];
+        },this)
     }
+}
 </script>
 
 <style scoped>

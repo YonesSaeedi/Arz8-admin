@@ -61,22 +61,22 @@
                     <b-row class="mt-2">
                         <b-col cols="6">
                             <validation-provider #default="{ errors }" rules="required|between:60000,120000">
-                                <b-form-group label="قیمت خرید پرفکت مانی">
+                                <b-form-group label="قیمت خرید">
                                     <b-form-input dir="ltr" class="text-center" :disabled="formData.psvouchers.price_api_status === 'true'"
                                                   v-model="formData.psvouchers.price.buy"
                                                   :state="errors.length > 0 ? false:null"
-                                                  placeholder="قیمت خرید پرفکت مانی"
+                                                  placeholder="قیمت خرید"
                                     />
                                 </b-form-group>
                             </validation-provider>
                         </b-col>
                         <b-col cols="6">
                             <validation-provider #default="{ errors }" rules="required|between:60000,120000">
-                                <b-form-group label="قیمت فروش پرفکت مانی">
+                                <b-form-group label="قیمت فروش">
                                     <b-form-input dir="ltr" class="text-center" :disabled="formData.psvouchers.price_api_status === 'true'"
                                                   v-model="formData.psvouchers.price.sell"
                                                   :state="errors.length > 0 ? false:null"
-                                                  placeholder="قیمت خرید پرفکت مانی"
+                                                  placeholder="قیمت خرید"
                                     />
                                 </b-form-group>
                             </validation-provider>
