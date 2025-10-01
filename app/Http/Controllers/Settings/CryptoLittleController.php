@@ -49,7 +49,7 @@ class CryptoLittleController extends ExchangeApi
         // Sum
 
         $result->sum = $this->sum($request);
-        $result->fee = $this->feeUsdt();
+        $result->fee = $this->priceUsdtInToman();
 
 
         return response()->json($result);

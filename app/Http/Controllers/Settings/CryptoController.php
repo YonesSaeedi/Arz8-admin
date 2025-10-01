@@ -286,7 +286,7 @@ class CryptoController extends ExchangeApi
         }
 
 
-        $result->total_toman = round($result->total_usdt * self::feeUsdt()['sell']);
+        $result->total_toman = round($result->total_usdt * self::priceUsdtInToman()['sell']);
 
         return response()->json($result);
     }
@@ -840,7 +840,7 @@ class CryptoController extends ExchangeApi
                 }else if($otp['status'] != true)
                     return response()->json($otp);
 
-                $price = $feeUsdt * $this->feeUsdt()['sell'];
+                $price = $feeUsdt * $this->priceUsdtInToman()['sell'];
                 $wallets = WalletsCrypto::where('id_crypto',$request->id)->where('value_num','>',0)->get();
                 foreach ($wallets as $wallet){
                     DB::beginTransaction();

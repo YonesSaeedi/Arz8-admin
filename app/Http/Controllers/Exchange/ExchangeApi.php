@@ -169,47 +169,20 @@ class ExchangeApi extends Controller
         return $pricess;
     }
 
-
-    public function priceUsdtInToman($Crypto){
-        $feeUsdtApiStatus = Settings::where('name','feeUsdtApi')->first()->value;
-        $settings = json_decode($Crypto->settings??'');
-
-        if($feeUsdtApiStatus !== 'false'){
-            $price_usdt_toman = Crypt::decryptString(Settings::where('name', 'feeUsdtApiPrice')->first()->value);
-            $result = array('buy'=>$price_usdt_toman,'sell'=>$price_usdt_toman);
-            $percent_buy = Crypt::decryptString(Settings::where('name', 'percentUsdtBuy')->first()->value);
-            $percent_sell = Crypt::decryptString(Settings::where('name', 'percentUsdtSell')->first()->value);
-            $result = $this->PercentageCalculation($result,$percent_buy,$percent_sell);
-        }else{
-            $result['buy'] = Crypt::decryptString(Settings::where('name', 'feeUsdtBuy_toman')->first()->value);
-            $result['sell'] = Crypt::decryptString(Settings::where('name', 'feeUsdtSell_toman')->first()->value);
-        }
-
-        if(isset($settings) && isset($settings->price_tether_satatus) && isset($settings->fee_buy) && isset($settings->fee_sell)){
-            if($settings->price_tether_satatus == 'on'){
-                if(isset($settings->percent_buy) && isset($settings->percent_sell))
-                    $result = $this->PercentageCalculation($result,$settings->percent_buy,$settings->percent_sell);
+    public function priceUsdtInToman($Crypto = null){
+        $result = Cache::remember('priceUsdtInTomanNew', Carbon::now()->addMinutes(1), function () use($Crypto) {
+            $feeUsdtApiStatus = Settings::where('name','feeUsdtApi')->first()->value;
+            if($feeUsdtApiStatus !== 'false'){
+                $price_usdt_toman = Crypt::decryptString(Settings::where('name', 'feeUsdtApiPrice')->first()->value);
             }else{
-                $result['buy'] = str_replace(',','',$settings->fee_buy);
-                $result['sell'] = str_replace(',','',$settings->fee_sell);
+                $price_usdt_toman = Crypt::decryptString(Settings::where('name', 'feeUsdt')->first()->value);
             }
-        }
-
-        return  $result;
-    }
-
-    public function feeUsdt(){
-        $feeUsdtApiStatus = Settings::where('name','feeUsdtApi')->first()->value;
-        if($feeUsdtApiStatus !== 'false'){
-            $price_usdt_toman = Crypt::decryptString(Settings::where('name', 'feeUsdtApiPrice')->first()->value);
             $result = array('buy'=>$price_usdt_toman,'sell'=>$price_usdt_toman);
             $percent_buy = Crypt::decryptString(Settings::where('name', 'percentUsdtBuy')->first()->value);
             $percent_sell = Crypt::decryptString(Settings::where('name', 'percentUsdtSell')->first()->value);
-            $result = $this->PercentageCalculation($result,$percent_buy,$percent_sell);
-        }else{
-            $result['buy'] = Crypt::decryptString(Settings::where('name', 'feeUsdtBuy_toman')->first()->value);
-            $result['sell'] = Crypt::decryptString(Settings::where('name', 'feeUsdtSell_toman')->first()->value);
-        }
+            $result = $this->percentageCalculation($result,$percent_buy,$percent_sell);
+            return  $result;
+        });
         return  $result;
     }
 }
