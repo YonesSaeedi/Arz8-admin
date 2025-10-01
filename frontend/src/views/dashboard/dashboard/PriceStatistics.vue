@@ -15,7 +15,6 @@
 
                 <div class="text-right">
                     <div v-if="data.theter" >
-                        A1: b:{{toFixFloat(parseInt(data.perfectmoney.buy))}} | s:{{toFixFloat(parseInt(data.perfectmoney.sell))}} | ba:{{toFixFloat(parseInt(data.perfectmoney.balance))}} <br>
                         B1: b:{{toFixFloat(parseInt(data.psvouchers.buy))}} | s:{{toFixFloat(parseInt(data.psvouchers.sell))}} | ba:{{toFixFloat(parseInt(data.psvouchers.balance))}}<br>
                         C1: b:{{toFixFloat(parseInt(data.utopia.buy))}} | s:{{toFixFloat(parseInt(data.utopia.sell))}} | ba:{{toFixFloat(parseInt(data.utopia.balance))}}<br>
                     </div>
