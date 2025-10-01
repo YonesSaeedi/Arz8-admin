@@ -129,7 +129,13 @@ class PricingContoller extends ExchangeApi
 
     function usdt()
     {
-        return self::priceUsdtInToman();
+        $feeUsdtApiStatus = Settings::where('name','feeUsdtApi')->first()->value;
+        if($feeUsdtApiStatus !== 'false'){
+            $price_usdt_toman = Crypt::decryptString(Settings::where('name', 'feeUsdtApiPrice')->first()->value);
+        }else{
+            $price_usdt_toman = Crypt::decryptString(Settings::where('name', 'feeUsdt')->first()->value);
+        }
+        return  $price_usdt_toman;
     }
 
 
