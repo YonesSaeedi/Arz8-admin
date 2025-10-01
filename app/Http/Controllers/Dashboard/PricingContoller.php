@@ -17,11 +17,11 @@ class PricingContoller extends ExchangeApi
         $result = new \stdClass();
 
         $functions = [
-            'perfectmoney' => 'perfectmoney',
             //'payeer' => 'payeer',
             'psvouchers' => 'psvouchers',
             'utopia' => 'utopia',
-            'theter' => 'theter'
+            'theter' => 'theter',
+            'usdt' => 'usdt',
         ];
 
         foreach ($functions as $key => $function) {
@@ -127,25 +127,11 @@ class PricingContoller extends ExchangeApi
     }
 
 
-    function perfectmoney()
+    function usdt()
     {
-        $result = (object)array();
-        $setting = json_decode(Crypt::decryptString(Settings::where('name', 'perfectmoney')->first()->value));
-        $result->buy = $setting->price->buy;
-        $result->sell = $setting->price->sell;
-        $result->balance = $setting->price->balance ?? 0;
-        return $result;
+        return self::priceUsdtInToman();
     }
 
-    function payeer()
-    {
-        $result = (object)array();
-        $setting = json_decode(Crypt::decryptString(Settings::where('name', 'payeer')->first()->value));
-        $result->buy = $setting->price->buy;
-        $result->sell = $setting->price->sell;
-        $result->balance = $setting->price->balance ?? 0;
-        return $result;
-    }
 
     function psvouchers()
     {
