@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Settings;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt as Crypt;
+use Carbon\Carbon;
 
 class ExchangeApi extends Controller
 {
