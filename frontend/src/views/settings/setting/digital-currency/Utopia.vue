@@ -61,7 +61,7 @@
 
                     <b-row class="mt-2">
                         <b-col cols="6">
-                            <validation-provider #default="{ errors }" rules="required|between:60000,120000">
+                            <validation-provider #default="{ errors }" rules="required|between:100000,999000">
                                 <b-form-group label="قیمت خرید">
                                     <b-form-input dir="ltr" class="text-center" :disabled="formData.utopia.price_api_status === 'true'"
                                                   v-model="formData.utopia.price.buy"
@@ -72,7 +72,7 @@
                             </validation-provider>
                         </b-col>
                         <b-col cols="6">
-                            <validation-provider #default="{ errors }" rules="required|between:60000,120000">
+                            <validation-provider #default="{ errors }" rules="required|between:100000,999000">
                                 <b-form-group label="قیمت فروش">
                                     <b-form-input dir="ltr" class="text-center" :disabled="formData.utopia.price_api_status === 'true'"
                                                   v-model="formData.utopia.price.sell"
@@ -134,7 +134,7 @@
                             </validation-provider>
                         </b-col>
                         <b-col cols="6" class="mt-1">
-                            <validation-provider #default="{ errors }" rules="required|between:10000,70000">
+                            <validation-provider #default="{ errors }" rules="required|between:100000,999000">
                                 <b-form-group label="حداقل مجاز برای خرید">
                                     <b-form-input dir="ltr" class="text-center"
                                                   v-model="formData.utopia.min_buy"
