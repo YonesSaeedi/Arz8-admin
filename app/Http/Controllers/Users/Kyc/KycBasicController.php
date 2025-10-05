@@ -37,6 +37,11 @@ class KycBasicController extends Controller
         if (isset($userExist) && isset($request->mobile))
             return array('status' => false, 'msg' => 'موبایل برای کاربر دیگری ثبت شده است.');
 
+        $userExist= User::where("email", $request->email)->where('id','!=',$user->id)->first();
+        if (isset($userExist) && isset($request->email))
+            return array('status' => false, 'msg' => 'ایمیل برای کاربر دیگری ثبت شده است.');
+
+
 
         $user->name = $request->name;
         $user->family = $request->family;

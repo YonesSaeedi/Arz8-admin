@@ -230,6 +230,7 @@ export default {
                     bodyFormData.append('dateBirth', this.user.date_birth)
                     bodyFormData.append('mobile', this.user.mobile?.trim() || null)
                     bodyFormData.append('father', this.user.father?.trim() || null)
+                    bodyFormData.append('email', this.user.email?.trim() || null)
 
                     axiosIns.post('/users/edit/kyc/basic/'+this.user.id,bodyFormData,{
                         onUploadProgress: function( progressEvent ) {

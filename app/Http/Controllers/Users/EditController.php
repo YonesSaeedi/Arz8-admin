@@ -30,6 +30,16 @@ class EditController extends UsersController
             foreach ($user->auth_img->file as $file)
                 $file->url = \Crypt::encryptString($file->url);
         }
+
+        if(isset($user->kyc_advanced) && $user->kyc_advanced->file){
+            $user->kyc_advanced->file1_hash = \Crypt::encryptString(end($user->auth_img->file)->file1);
+            $user->kyc_advanced->file2_hash = \Crypt::encryptString(end($user->auth_img->file)->file2);
+            foreach ($user->auth_img->file as $file)
+                $file->file1 = \Crypt::encryptString($file->file1);
+                $file->file2 = \Crypt::encryptString($file->file2);
+        }
+
+
         $user->address = json_decode($user->address);
 
         $user->info = json_decode($user->info??'{"birthplace":null}');

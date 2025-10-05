@@ -31,7 +31,7 @@
                         <KycBasic :user="user" @getUser="getUser()" />
                     </b-tab>
                     <b-tab title="سطح پیشرفته">
-
+                        <KycAdvanced :user="user" @getUser="getUser()" />
                     </b-tab>
                 </b-tabs>
             </b-card>
@@ -63,6 +63,7 @@
     import Level4 from "./Level4";
     import Level5 from "./Level5";
     import KycBasic from "./kyc/Basic";
+    import KycAdvanced from "./kyc/Advanced.vue";
     import settings from "./settings";
     import LevelAccount from "./LevelAccount";
 
@@ -85,6 +86,7 @@
             settings,
             LevelAccount,
             KycBasic,
+            KycAdvanced,
 
             Table,
             BTable,
