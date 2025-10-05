@@ -63,6 +63,10 @@ Route::group(['prefix' => 'v2','middleware' => ['XssSanitizer','throttle:60,1','
             $controller = app('App\Http\Controllers\Controller');
             return $controller->imageView($request);
         });
+        Route::get('image2/{hash}', function(\Illuminate\Http\Request $request) {
+            $controller = app('App\Http\Controllers\Controller');
+            return $controller->imageView2($request);
+        });
 
         // Dashboard
         Route:: group(['namespace' => 'Dashboard'], function () {

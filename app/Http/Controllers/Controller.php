@@ -31,7 +31,16 @@ class Controller extends BaseController
         //dd($storagePath);
         //return \Image::make($storagePath)->response('jpg');
         return response(\File::get($storagePath), 200)->header('Content-Type', 'image/jpg');
-
+    }
+    function imageView2(\Illuminate\Http\Request $request){
+        $storagePath = \Crypt::decryptString($request->hash);
+        //$storagePath = base_path('').env('PATH_PANEL').'/storage/'.$storagePath;
+        //$storagePath = str_replace(env('PATH_ADMIN_PANEL'),'',$storagePath);
+        $storagePath = storage_path().'/'.$storagePath;
+        $storagePath = str_replace(env('PATH_ADMIN_PANEL'),'saeedi',$storagePath);
+        //dd($storagePath);
+        //return \Image::make($storagePath)->response('jpg');
+        return response(\File::get($storagePath), 200)->header('Content-Type', 'image/jpg');
     }
 
     function storagePath(){

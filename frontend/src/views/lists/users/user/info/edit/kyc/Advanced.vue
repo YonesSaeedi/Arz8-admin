@@ -14,6 +14,26 @@
                         اطلاعات سطح دو در این بخش قابل ثبت و ویرایش میباشد! اطلاعات این سطح باید به تایید شما برسد و
                         اگر بعد از تایید سطح آن کمتر از سه باشد، به سطه سه ارتقاء میباید.
                     </p>
+                    <div  class="mb-2">
+                        <b-button size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="info" class="mr-md-2 mt-md-0 mt-25"
+                                  v-b-modal.modal-level2-list-file>
+                            <feather-icon icon="ListIcon" class="mr-50"/>
+                            لیست تصاویر آپلودی
+                        </b-button>
+
+                        <b-button v-if="user.kyc_advanced.status === 'reject' || user.kyc_advanced.status === 'pending'"
+                                  @click="confirm()" size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="success" class="mr-md-2 mt-md-0 mt-25">
+                            <feather-icon icon="CheckSquareIcon" class="mr-50"/>
+                            تایید اطلاعات
+                        </b-button>
+
+                        <b-button v-if="user.kyc_advanced.status === 'confirm' || user.kyc_advanced.status === 'pending'"
+                                  @click="reject()" size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="danger" class="mr-md-2 mt-md-0 mt-25">
+                            <feather-icon icon="CheckSquareIcon" class="mr-50"/>
+                            رد کردن اطلاعات
+                        </b-button>
+                    </div>
+                    <hr class="w-100">
 
                     <b-alert variant="warning" show v-if="user.kyc_advanced && user.kyc_advanced.status === 'pending'">
                         <div class="alert-body">
@@ -35,57 +55,44 @@
                     </b-alert>
 
                     <b-row>
-                        <b-col md="12" class=" mx-auto">
-                            <file-pond
-                                name="test"
-                                ref="pond"
-                                captureMethod="capture"
-                                :label-idle="$t('Click to upload the file or drag and drop the file')"
-                                accepted-file-types="image/jpeg, image/png"
-                                v-bind:server="/*myServer*/null"
-                                :files="user.kyc_advanced && user.kyc_advanced.file1 ? myFiles: null"
-                                :processfile="null"
-                            />
+                        <b-col md="6" class=" mx-auto">
+                            <b-form-group label="آپلود فایل 1">
+                                <validation-provider #default="{ errors }">
+                                    <b-form-file
+                                        v-model="selectedFile1"
+                                        :state="errors.length > 0 ? false : null"
+                                        placeholder="فایل را انتخاب کنید یا اینجا رها کنید"
+                                        drop-placeholder="فایل را اینجا رها کنید"
+                                        accept="image/jpeg, image/png"
+                                    />
+                                </validation-provider>
+                            </b-form-group>
+                            <b-button v-if="user.kyc_advanced && user.kyc_advanced.file"
+                                      size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="primary" class="mr-md-1"
+                                      v-b-modal.modal-advanced-file1>
+                                <feather-icon icon="DownloadIcon" class="mr-50"/>
+                                مشاهده تصویر 1
+                            </b-button>
                         </b-col>
-                        <b-col md="12" class=" mx-auto">
-                            <file-pond
-                                name="test"
-                                ref="pond"
-                                captureMethod="capture"
-                                :label-idle="$t('Click to upload the file or drag and drop the file')"
-                                accepted-file-types="image/jpeg, image/png"
-                                v-bind:server="/*myServer*/null"
-                                :files="user.kyc_advanced && user.kyc_advanced.file2 ? myFiles: null"
-                                :processfile="null"
-                            />
-                        </b-col>
-                        <b-col md="12">
+                        <b-col md="6" class=" mx-auto">
+                            <b-form-group label="آپلود فایل 2">
+                                <validation-provider #default="{ errors }">
+                                    <b-form-file
+                                        v-model="selectedFile2"
+                                        :state="errors.length > 0 ? false : null"
+                                        placeholder="فایل را انتخاب کنید یا اینجا رها کنید"
+                                        drop-placeholder="فایل را اینجا رها کنید"
+                                        accept="image/jpeg, image/png"
+                                    />
+                                </validation-provider>
+                            </b-form-group>
                             <b-button v-if="user.kyc_advanced && user.kyc_advanced.file"
                                       size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="primary" class="mr-md-2"
-                                      v-b-modal.modal-level2-file>
+                                      v-b-modal.modal-advanced-file1>
                                 <feather-icon icon="DownloadIcon" class="mr-50"/>
-                                مشاهده تصویر
-                            </b-button>
-
-                            <b-button size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="primary" class="mr-md-2 mt-md-0 mt-25"
-                                      v-b-modal.modal-level2-list-file>
-                                <feather-icon icon="ListIcon" class="mr-50"/>
-                                لیست تصاویر آپلودی
-                            </b-button>
-
-                            <b-button v-if="user.kyc_advanced.status === 'reject' || user.kyc_advanced.status === 'pending'"
-                                      @click="confirm()" size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="success" class="mr-md-2 mt-md-0 mt-25">
-                                <feather-icon icon="CheckSquareIcon" class="mr-50"/>
-                                تایید اطلاعات
-                            </b-button>
-
-                            <b-button v-if="user.kyc_advanced.status === 'confirm' || user.kyc_advanced.status === 'pending'"
-                                      @click="reject()" size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="danger" class="mr-md-2 mt-md-0 mt-25">
-                                <feather-icon icon="CheckSquareIcon" class="mr-50"/>
-                                رد کردن اطلاعات
+                                مشاهده تصویر 2
                             </b-button>
                         </b-col>
-
                         <hr class="w-100">
                         <b-col md="6" class=" mx-auto">
                             <b-button block
@@ -99,6 +106,7 @@
                                 <div class="line-height-0 ml-25"><b-spinner v-if="isLoading" small></b-spinner></div>
                             </b-button>
                         </b-col>
+
                     </b-row>
                 </b-col>
 
@@ -106,11 +114,16 @@
         </validation-observer>
 
         <!-- basic modal -->
-        <b-modal id="modal-level2-file" scrollable size="lg" title="تصویر" ok-only ok-title="باشه">
-            <a :href="baseAdminURL+'image/'+ user.kyc_advanced.file_hash +'/image.jpg'" target="_blank">
-                <img :src="baseAdminURL+'image/'+ user.kyc_advanced.file_hash +'/image.jpg'"  width="100%" class="box-shadow-1 border">
+        <b-modal id="modal-advanced-file1" scrollable size="lg" title="تصویر 1" ok-only ok-title="باشه">
+            <a :href="baseAdminURL+'image2/'+ user.kyc_advanced.file1_hash +'/image.jpg'" target="_blank">
+                <img :src="baseAdminURL+'image2/'+ user.kyc_advanced.file1_hash +'/image.jpg'"  width="100%" class="box-shadow-1 border">
             </a>
-            <!--<img :src="srcFile" width="100%" class="box-shadow-1 border">-->
+        </b-modal>
+        <!-- basic modal -->
+        <b-modal id="modal-advanced-file2" scrollable size="lg" title="تصویر 2" ok-only ok-title="باشه">
+            <a :href="baseAdminURL+'image2/'+ user.kyc_advanced.file2_hash +'/image.jpg'" target="_blank">
+                <img :src="baseAdminURL+'image2/'+ user.kyc_advanced.file2_hash +'/image.jpg'"  width="100%" class="box-shadow-1 border">
+            </a>
         </b-modal>
 
         <!-- basic modal -->
@@ -133,13 +146,13 @@
                     <tr v-for="(item, indextr) in user.kyc_advanced.file">
                         <td class="text-nowrap vazir">{{convertDate(item.date)}}</td>
                         <td>
-                            <a :href="baseAdminURL+'image/'+ item.url +'/image.jpg'" target="_blank">
-                                <img :src="baseAdminURL+'image/'+ item.file1 +'/image.jpg'" width="50px">
+                            <a :href="baseAdminURL+'image2/'+ item.url +'/image.jpg'" target="_blank">
+                                <img :src="baseAdminURL+'image2/'+ item.file1 +'/image.jpg'" width="50px">
                             </a>
                         </td>
                         <td>
-                            <a :href="baseAdminURL+'image/'+ item.url +'/image.jpg'" target="_blank">
-                                <img :src="baseAdminURL+'image/'+ item.file2 +'/image.jpg'" width="50px">
+                            <a :href="baseAdminURL+'image2/'+ item.url +'/image.jpg'" target="_blank">
+                                <img :src="baseAdminURL+'image2/'+ item.file2 +'/image.jpg'" width="50px">
                             </a>
                         </td>
                         <td class="text-nowrap">
@@ -179,6 +192,7 @@ import {
     BInputGroupAppend,
     BFormGroup,
     BFormInput,
+    BFormFile,
     BTable,
     BButton,
     BMedia,
@@ -190,7 +204,8 @@ import {
     BSpinner,
     BAlert,
     BFormRadio,
-    VBTooltip
+    VBTooltip,
+    BFormInvalidFeedback
 } from 'bootstrap-vue';
 import Table from "@/views/vuexy/table/bs-table/Table";
 import BCardActions from "@core/components/b-card-actions/BCardActions";
@@ -203,23 +218,7 @@ import VuePersianDatetimePicker from 'vue-persian-datetime-picker'
 import jalaliMmoment from "jalali-moment";
 
 
-// Import Vue FilePond
-import vueFilePond from 'vue-filepond'
 
-// Import FilePond styles
-import 'filepond/dist/filepond.min.css'
-// Import image preview plugin styles
-import 'filepond-plugin-image-preview/dist/filepond-plugin-image-preview.min.css'
-
-// Import image preview and file type validation plugins
-import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type'
-import FilePondPluginImagePreview from 'filepond-plugin-image-preview'
-
-// Create component
-const FilePond = vueFilePond(
-    FilePondPluginFileValidateType,
-    FilePondPluginImagePreview,
-)
 
 
 export default {
@@ -237,12 +236,11 @@ export default {
         BCardBody,
         BCollapse,
         BButton,BAlert,BFormRadio,
-        BInputGroup,BFormGroup, BInputGroupAppend,BFormInput,
-        BMedia, BAvatar,BTab,BTabs,BForm,BFormSelect,BSpinner,
+        BInputGroup,BFormGroup, BInputGroupAppend,BFormInput,BFormFile,
+        BMedia, BAvatar,BTab,BTabs,BForm,BFormSelect,BSpinner,BFormInvalidFeedback,
         ValidationProvider,
         ValidationObserver,
         datePicker: VuePersianDatetimePicker,
-        FilePond
     },
     directives: {
         Ripple,
@@ -250,27 +248,10 @@ export default {
     },
     data() {
         return {
+            selectedFile1: null,
+            selectedFile2: null,
             emailVerified:null,
             isLoading:false,
-            myFiles: [
-                {
-                    source:
-                        "users/edit/kyc/advanced/"+ this.user.id +"/file",
-                    options: {
-                        type: "local"
-                    }
-                }
-            ],
-            myServer: {
-                process: null,
-                load: (source, load) => {
-                    axiosIns.get(source, {responseType: 'blob' })
-                        .then((response) => {
-                            const new_blob = new Blob( [ response.data ], { type: 'image/jpg' } );
-                            load(new_blob)
-                        })
-                }
-            },
             uploadPercentage:0,
             srcFile: null,
         }
@@ -415,114 +396,4 @@ export default {
 </script>
 
 <style lang="scss">
-#level2-form{
-    .filepond--image-preview-wrapper div{
-        direction: rtl;
-
-    }
-
-    .filepond--file .filepond--file-status{
-        margin-right: auto;
-        margin-left: 2.25em !important;
-    }
-
-    .filepond--file-info,.filepond--file-status{
-        font-size: 18px !important;
-    }
-    .filepond--credits{
-        display: none;
-    }
-
-    .filepond--file-action-button,.filepond--drop-label, .filepond--drop-label label{
-        cursor: pointer;
-    }
-
-    /* the text color of the drop label*/
-    .filepond--drop-label {
-        color: #555;
-        font-family: iranyekan,"Montserrat", Helvetica, Arial, sans-serif;
-    }
-
-    /* underline color for "Browse" button */
-    .filepond--label-action {
-        text-decoration-color: #aaa;
-    }
-
-    /* the background color of the filepond drop area */
-    .filepond--panel-root {
-        background-color: #eee;
-    }
-
-    /* the border radius of the drop area */
-    .filepond--panel-root {
-        border-radius: 0.5em;
-    }
-
-    /* the border radius of the file item */
-    .filepond--item-panel {
-        border-radius: 0.5em;
-    }
-
-    /* the background color of the file and file panel (used when dropping an image) */
-    .filepond--item-panel {
-        background-color: #555;
-    }
-
-    /* the background color of the drop circle */
-    .filepond--drip-blob {
-        background-color: #999;
-    }
-
-    /* the background color of the black action buttons */
-    .filepond--file-action-button {
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-
-    /* the icon color of the black action buttons */
-    .filepond--file-action-button {
-        color: white;
-    }
-
-    /* the color of the focus ring */
-    .filepond--file-action-button:hover,
-    .filepond--file-action-button:focus {
-        box-shadow: 0 0 0 0.125em rgba(255, 255, 255, 0.9);
-    }
-
-    /* the text color of the file status and info labels */
-    .filepond--file {
-        color: white;
-    }
-
-    /* error state color */
-    [data-filepond-item-state*='error'] .filepond--item-panel,
-    [data-filepond-item-state*='invalid'] .filepond--item-panel {
-        //background-color: red;
-    }
-
-    [data-filepond-item-state='processing-complete'] .filepond--item-panel {
-        background-color: green;
-    }
-
-    /* bordered drop area */
-    .filepond--panel-root {
-        background-color: transparent;
-        border: 2px solid #2c3340;
-        .dark-layout & {
-            border: 2px solid white;
-        }
-    }
-
-
-    .filepond--file-status-sub,.filepond--file-info-sub{
-        opacity: 0.8 !important;
-    }
-
-    .success .filepond--panel-root{
-        border-color: rgba(var(--vs-success), 1) !important;
-    }
-    .warning .filepond--panel-root{
-        border-color: rgba(var(--vs-warning), 1) !important;
-    }
-}
 </style>
