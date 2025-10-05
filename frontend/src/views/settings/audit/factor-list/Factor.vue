@@ -352,6 +352,8 @@ export default {
             .catch(() => { this.errorFetching(); })
         },
         getFeePercentage(amount, type) {
+            return  0.005;
+
             // تعریف نرخ‌های کارمزد
             const buyFeeRate1 = 0.004;  // 0.4% برای خرید زیر ۵ میلیون
             const buyFeeRate2 = 0.003;  // 0.3% برای خرید بین ۵ تا ۱۰ میلیون
