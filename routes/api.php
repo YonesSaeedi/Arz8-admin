@@ -39,6 +39,10 @@ Route::get('image/{hash}/image.jpg', function(\Illuminate\Http\Request $request)
     $controller = app('App\Http\Controllers\Controller');
     return $controller->imageView($request);
 });
+Route::get('image2/{hash}/image.jpg', function(\Illuminate\Http\Request $request) {
+    $controller = app('App\Http\Controllers\Controller');
+    return $controller->imageView2($request);
+});
 
 Route::group(['prefix' => 'v2','middleware' => ['XssSanitizer','throttle:60,1','verifySignature']], function() {
     Route::post('/login', 'AuthController@login');
@@ -77,11 +81,10 @@ Route::group(['prefix' => 'v2','middleware' => ['XssSanitizer','throttle:60,1','
         // Users
         Route:: group(['namespace' => 'Users'], function () {
             Route:: group(['namespace' => 'Kyc'], function () {
-                Route::post('/users/edit/kyc/basic/{id}', 'KycBasicController@basic');
+                Route::post('/users/edit/kyc/basic/{id}', 'KycBasicController@Basic');
 
-                Route::post('/users/edit/kyc/advanced/{id}', 'KycBasicController@basic');
-                Route::get('/users/edit/kyc/advanced/{id}/file', 'KycBasicController@basic');
-                Route::put('/users/edit/kyc/advanced/{id}/status', 'EditController@level2Status');
+                Route::post('/users/edit/kyc/advanced/{id}', 'KycAdvancedController@Advanced');
+                Route::put('/users/edit/kyc/advanced/{id}/status', 'KycAdvancedController@Status');
             });
             // user
             Route::post('/users/list', 'UsersController@listUsers');

@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class KycBasicController extends Controller
 {
-    function basic(Request $request){
+    function Basic(Request $request){
         $validator = \Validator::make($request->all(), [
             'mobile' => 'nullable|numeric|digits:11',
             'email' => 'nullable|email',

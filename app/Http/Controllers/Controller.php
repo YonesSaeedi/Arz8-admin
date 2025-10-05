@@ -38,7 +38,6 @@ class Controller extends BaseController
         //$storagePath = str_replace(env('PATH_ADMIN_PANEL'),'',$storagePath);
         $storagePath = storage_path().'/'.$storagePath;
         $storagePath = str_replace(env('PATH_ADMIN_PANEL'),'saeedi',$storagePath);
-        //dd($storagePath);
         //return \Image::make($storagePath)->response('jpg');
         return response(\File::get($storagePath), 200)->header('Content-Type', 'image/jpg');
     }

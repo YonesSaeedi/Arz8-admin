@@ -57,7 +57,7 @@
                     <b-row>
                         <b-col md="6" class=" mx-auto">
                             <b-form-group label="آپلود فایل 1">
-                                <validation-provider #default="{ errors }">
+                                <validation-provider #default="{ errors }" rules="required">
                                     <b-form-file
                                         v-model="selectedFile1"
                                         :state="errors.length > 0 ? false : null"
@@ -76,7 +76,7 @@
                         </b-col>
                         <b-col md="6" class=" mx-auto">
                             <b-form-group label="آپلود فایل 2">
-                                <validation-provider #default="{ errors }">
+                                <validation-provider #default="{ errors }" rules="required">
                                     <b-form-file
                                         v-model="selectedFile2"
                                         :state="errors.length > 0 ? false : null"
@@ -103,7 +103,7 @@
                                       :disabled="isLoading"
                             >
                                 <div>ثبت تغییرات</div>
-                                <div class="line-height-0 ml-25"><b-spinner v-if="isLoading" small></b-spinner></div>
+                                <div class="line-height-0 ml-25"><b-spinner v-if="isLoading" small></b-spinner><span v-if="selectedFile2 > 0">{{selectedFile2}}</span></div>
                             </b-button>
                         </b-col>
 
@@ -146,12 +146,12 @@
                     <tr v-for="(item, indextr) in user.kyc_advanced.file">
                         <td class="text-nowrap vazir">{{convertDate(item.date)}}</td>
                         <td>
-                            <a :href="baseAdminURL+'image2/'+ item.url +'/image.jpg'" target="_blank">
+                            <a :href="baseAdminURL+'image2/'+ item.file1 +'/image.jpg'" target="_blank">
                                 <img :src="baseAdminURL+'image2/'+ item.file1 +'/image.jpg'" width="50px">
                             </a>
                         </td>
                         <td>
-                            <a :href="baseAdminURL+'image2/'+ item.url +'/image.jpg'" target="_blank">
+                            <a :href="baseAdminURL+'image2/'+ item.file2 +'/image.jpg'" target="_blank">
                                 <img :src="baseAdminURL+'image2/'+ item.file2 +'/image.jpg'" width="50px">
                             </a>
                         </td>
@@ -263,8 +263,12 @@ export default {
                     this.isLoading = true;
 
                     const bodyFormData = new FormData()
-                    if(this.$refs.pond.getFiles()[0] && this.$refs.pond.getFiles()[0].file && this.$refs.pond.getFiles()[0].file.name !=='file')
-                        bodyFormData.append('file', this.$refs.pond.getFiles()[0].file);
+                    if (this.selectedFile1) {
+                        bodyFormData.append('file1', this.selectedFile1);
+                    }
+                    if (this.selectedFile2) {
+                        bodyFormData.append('file2', this.selectedFile2);
+                    }
 
                     axiosIns.post('/users/edit/kyc/advanced/'+this.user.id,bodyFormData,{
                         onUploadProgress: function( progressEvent ) {
