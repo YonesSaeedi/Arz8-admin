@@ -31,6 +31,7 @@ class EditController extends UsersController
                 $file->url = \Crypt::encryptString($file->url);
         }
 
+        $user->kyc_advanced = json_decode($user->kyc_advanced);
         if(isset($user->kyc_advanced) && $user->kyc_advanced->file){
             $user->kyc_advanced->file1_hash = \Crypt::encryptString(end($user->auth_img->file)->file1);
             $user->kyc_advanced->file2_hash = \Crypt::encryptString(end($user->auth_img->file)->file2);
