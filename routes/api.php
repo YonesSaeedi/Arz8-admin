@@ -73,7 +73,7 @@ Route::group(['prefix' => 'v2','middleware' => ['XssSanitizer','throttle:60,1','
         // Users
         Route:: group(['namespace' => 'Users'], function () {
             Route:: group(['namespace' => 'Kyc'], function () {
-                Route::post('/users/edit/kyc/basic', 'KycBasicController@basic');
+                Route::post('/users/edit/kyc/basic/{id}', 'KycBasicController@basic');
             });
             // user
             Route::post('/users/list', 'UsersController@listUsers');
