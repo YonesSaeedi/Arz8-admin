@@ -141,7 +141,7 @@ class FactorController extends Controller {
         $internal->wage = $this->calculateFee($internal->amount,$internal->type);
 
         $data = json_decode($internal->data);
-        if(!isset($data->fee_usd) && $internal->created_at > '2025-01-20'){
+        if(!isset($data->fee_usdt) && $internal->created_at > '2025-01-20'){
             $data->fee_usdt = ['buy'=>90000];
             $internal->data = json_encode($data);
         }
