@@ -89,9 +89,9 @@ Arz8.com'
             "format" => "png",
             "quality" => "".rand(90,100),
             "delay" => "3",
-            "fresh" => "true", // از داکیومنت apiflash
-            "js" => "document.querySelector('section:first-child').remove();document.querySelectorAll('aside').forEach(el => el.remove());",
-        );
+            "fresh" => "true",
+            "js" => "document.querySelector('section:first-child').remove();document.querySelectorAll('aside').forEach(el => el.remove());const laterBtn = document.querySelector('.Re5ET_');if(laterBtn) laterBtn.click();",
+            );
 
         $image_data = file_get_contents("https://api.apiflash.com/v1/urltoimage?" . http_build_query($params));
         $fileName = storage_path()."/coin360_".$time.".png";

@@ -16,7 +16,7 @@
                     </p>
                     <div  class="mb-2">
                         <b-button size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="info" class="mr-md-2 mt-md-0 mt-25"
-                                  v-b-modal.modal-level2-list-file>
+                                  v-b-modal.modal-advanced-list-file>
                             <feather-icon icon="ListIcon" class="mr-50"/>
                             لیست تصاویر آپلودی
                         </b-button>
@@ -54,7 +54,7 @@
                         </div>
                     </b-alert>
 
-                    
+
                     <b-row>
                         <b-col md="6" class=" mx-auto">
                             <b-form-group label="آپلود فایل 1">
@@ -89,7 +89,7 @@
                             </b-form-group>
                             <b-button v-if="user.kyc_advanced && user.kyc_advanced.file"
                                       size="sm" v-ripple.400="'rgba(255, 255, 255, 0.15)'" variant="primary" class="mr-md-2"
-                                      v-b-modal.modal-advanced-file1>
+                                      v-b-modal.modal-advanced-file2>
                                 <feather-icon icon="DownloadIcon" class="mr-50"/>
                                 مشاهده تصویر 2
                             </b-button>
@@ -128,8 +128,7 @@
         </b-modal>
 
         <!-- basic modal -->
-        <b-modal id="modal-level2-list-file" scrollable size="xl" title="لیست تصاویر آپلود شده" ok-only ok-title="باشه"
-                 v-if="user.kyc_advanced && user.kyc_advanced.file">
+        <b-modal id="modal-advanced-list-file" scrollable size="xl" title="لیست تصاویر آپلود شده" ok-only ok-title="باشه">
             <div class="table-responsive mb-1">
                 <table class="table b-table table-striped">
                     <thead>
@@ -143,7 +142,7 @@
                         <td>توضیحات</td>
                     </tr>
                     </thead>
-                    <tbody>
+                    <tbody v-if="user.kyc_advanced && user.kyc_advanced.file">
                     <tr v-for="(item, indextr) in user.kyc_advanced.file">
                         <td class="text-nowrap vazir">{{convertDate(item.date)}}</td>
                         <td>
