@@ -49,23 +49,25 @@ class MarketingLeague extends Command
     public function handle()
     {
         $reward = [
-            ['id_crypto' => 5, 'amount' => 20],
-            ['id_crypto' => 5, 'amount' => 10],
-            ['id_crypto' => 5, 'amount' => 5]
+            ['id_crypto' => 18, 'amount' => 1000000],
+            ['id_crypto' => 18, 'amount' => 500000],
+            ['id_crypto' => 18, 'amount' => 300000],
+            ['id_crypto' => 18, 'amount' => 100000],
+            ['id_crypto' => 18, 'amount' => 100000],
         ];
-        $titles = ['جایزه نفر اول', 'جایزه نفر دوم', 'جایزه نفر سوم'];
+        $titles = ['جایزه نفر اول', 'جایزه نفر دوم', 'جایزه نفر سوم', 'جایزه نفر چهارم', 'جایزه نفر پنجم'];
 
-        $startOfLeague = Carbon::createFromFormat('Y-m-d', '2025-08-07')->startOfDay();
+        $startOfLeague = Carbon::createFromFormat('Y-m-d', '2025-10-19')->startOfDay();
         $yesterdayStart = Carbon::yesterday()->startOfDay();
         $yesterdayEnd = Carbon::yesterday()->endOfDay();
 
         // گرفتن تاریخ آخرین برد هر کاربر
-        $winnerDates = Ml::select('date', 'id_user_1', 'id_user_2', 'id_user_3')->get();
+        $winnerDates = Ml::select('date', 'id_user_1', 'id_user_2', 'id_user_3', 'id_user_4', 'id_user_5')->get();
         $userLastWinMap = [];
 
         foreach ($winnerDates as $row) {
             $winDate = Carbon::parse($row->date)->addDay()->startOfDay(); // شروع محاسبه از روز بعد برد
-            foreach (['id_user_1', 'id_user_2', 'id_user_3'] as $field) {
+            foreach (['id_user_1', 'id_user_2', 'id_user_3', 'id_user_4', 'id_user_5'] as $field) {
                 $uid = $row->{$field};
                 if ($uid) {
                     if (!isset($userLastWinMap[$uid]) || $winDate->gt($userLastWinMap[$uid])) {
@@ -114,14 +116,14 @@ class MarketingLeague extends Command
             ->values();
 
         // گرفتن سه نفر اول با مجموع خرید بالاتر از صفر
-        $top3 = $rankedUsers->filter(fn($item) => $item->total_amount > 0)->take(3);
+        $top3 = $rankedUsers->filter(fn($item) => $item->total_amount > 0)->take(5);
 
         //dd($top3);
 
         // پرداخت جوایز
         foreach ($top3 as $key => $entry) {
             if (!isset($reward[$key])) break;
-            $userId = $entry->id_user;
+            $userId = 638;//$entry->id_user;
             $this->transactionCryptoWallet($userId, (object)$reward[$key], $titles[$key]);
         }
 
@@ -131,7 +133,9 @@ class MarketingLeague extends Command
         $MarketingLeague->id_user_1 = $top3[0]->id_user ?? null;
         $MarketingLeague->id_user_2 = $top3[1]->id_user ?? null;
         $MarketingLeague->id_user_3 = $top3[2]->id_user ?? null;
-        $MarketingLeague->data = json_encode(['20 تتر', '10 تتر', '5 تتر']);
+        $MarketingLeague->id_user_4 = $top3[3]->id_user ?? null;
+        $MarketingLeague->id_user_5 = $top3[4]->id_user ?? null;
+        $MarketingLeague->data = json_encode(['1 میلیون شیبا', '500 هزار شیبا', '300 هزار شیبا', '100 هزار شیبا', '100 هزار شیبا']);
         $MarketingLeague->save();
     }
 
