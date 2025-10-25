@@ -88,7 +88,7 @@ Arz8.com'
             "url" => "https://coin360.com/widget/map?utm_source=embed_map&v=" . $time, // پارامتر ضد کش
             "format" => "png",
             "quality" => "".rand(90,100),
-            "delay" => "3",
+            "delay" => "4",
             "fresh" => "true",
             "js" => "document.querySelector('section:first-child').remove();document.querySelectorAll('aside').forEach(el => el.remove());const laterBtn = document.querySelector('.Re5ET_');if(laterBtn) laterBtn.click();",
             );
