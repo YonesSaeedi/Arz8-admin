@@ -57,9 +57,9 @@ class MarketingLeague extends Command
         ];
         $titles = ['جایزه نفر اول', 'جایزه نفر دوم', 'جایزه نفر سوم', 'جایزه نفر چهارم', 'جایزه نفر پنجم'];
 
-        $startOfLeague = Carbon::createFromFormat('Y-m-d', '2025-10-19')->startOfDay();
-        $yesterdayStart = Carbon::yesterday()->startOfDay();
-        $yesterdayEnd = Carbon::yesterday()->endOfDay();
+        //$startOfLeague = Carbon::createFromFormat('Y-m-d', '2025-10-19')->startOfDay();
+        $yesterdayStart = Carbon::now()->startOfDay();
+        $yesterdayEnd = Carbon::now()->endOfDay();
 
         // گرفتن تاریخ آخرین برد هر کاربر
         $winnerDates = Ml::select('date', 'id_user_1', 'id_user_2', 'id_user_3', 'id_user_4', 'id_user_5')->get();
@@ -84,15 +84,15 @@ class MarketingLeague extends Command
         DB::table('orders')
             ->where('status', 'success')
             ->where('created_at', '<=', $yesterdayEnd)
-            ->where('created_at', '>=', $startOfLeague)
+            ->where('created_at', '>=', $yesterdayStart)
             ->where('id_user', '!=', 1)
             ->select('id_user', 'amount', 'created_at')
             ->orderBy('id_user')
-            ->chunk(1000, function ($ordersChunk) use (&$usersTotal, $userLastWinMap, $yesterdayEnd, $startOfLeague) {
+            ->chunk(1000, function ($ordersChunk) use (&$usersTotal, $userLastWinMap, $yesterdayEnd, $yesterdayStart) {
                 foreach ($ordersChunk as $order) {
                     $uid = $order->id_user;
                     // تاریخ شروع محاسبه برای هر کاربر: روز بعد آخرین برد یا شروع لیگ
-                    $userStart = $userLastWinMap[$uid] ?? $startOfLeague;
+                    $userStart = $userLastWinMap[$uid] ?? $yesterdayStart;
 
                     $createdAt = Carbon::parse($order->created_at);
                     if ($createdAt->gte($userStart) && $createdAt->lte($yesterdayEnd)) {
@@ -117,8 +117,6 @@ class MarketingLeague extends Command
 
         // گرفتن سه نفر اول با مجموع خرید بالاتر از صفر
         $top3 = $rankedUsers->filter(fn($item) => $item->total_amount > 0)->take(5);
-
-        //dd($top3);
 
         // پرداخت جوایز
         foreach ($top3 as $key => $entry) {

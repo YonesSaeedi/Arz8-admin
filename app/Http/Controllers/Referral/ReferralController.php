@@ -10,7 +10,7 @@ use App\Models\UserReferral;
 use Illuminate\Http\Request;
 use Morilog\Jalali;
 
-class referralController extends Controller
+class ReferralController extends Controller
 {
     function listUsers(Request $request)
     {
