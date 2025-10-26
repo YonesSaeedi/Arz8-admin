@@ -22,7 +22,6 @@ jobs:
 
       - name: Deploy Laravel
         run: |
-          # تعیین مسیر بر اساس برنچ
           if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
             TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
           elif [ "${GITHUB_REF}" == "refs/heads/dev" ]; then
@@ -36,10 +35,14 @@ jobs:
           echo "🌿 Branch: ${GITHUB_REF##*/}"
 
           ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
-            set -e  # در صورت خطا متوقف شود
+            set -e
 
             echo '📂 Changing to target directory...'
-            cd '$TARGET_DIR' || { echo '❌ Directory not found'; exit 1; }
+            cd '$TARGET_DIR'
+
+            # اضافه کردن گیتهاب به known_hosts
+            mkdir -p ~/.ssh
+            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
             echo '🔄 Resetting and cleaning...'
             git reset --hard HEAD
