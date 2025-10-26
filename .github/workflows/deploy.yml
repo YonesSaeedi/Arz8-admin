@@ -34,7 +34,9 @@ jobs:
             git clean -fd &&
             git pull origin ${GITHUB_REF##*/} --no-rebase &&
             /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader &&
-            /usr/local/php82/bin/php82 artisan optimize:clear &&
+            /usr/local/php82/bin/php82 artisan cache:clear &&
+            /usr/local/php82/bin/php82 artisan config:clear &&
+            /usr/local/php82/bin/php82 artisan route:clear &&
             chown -R cp38729:cp38729 ${TARGET_DIR}
           "
 
