@@ -34,21 +34,19 @@ jobs:
           echo "🎯 Deploying to: $TARGET_DIR"
           echo "🌿 Branch: ${GITHUB_REF##*/}"
 
-          ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
+          # Forward SSH agent to server
+          ssh -A -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
             set -e
 
             echo '📂 Changing to target directory...'
             cd '$TARGET_DIR'
-
-            # اضافه کردن گیتهاب به known_hosts
-            mkdir -p ~/.ssh
-            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
             echo '🔄 Resetting and cleaning...'
             git reset --hard HEAD
             git clean -fd
 
             echo '📥 Pulling latest changes...'
+            # استفاده از SSH agent forwarded
             git pull origin '${GITHUB_REF##*/}' --no-rebase
 
             echo '📦 Installing dependencies...'
