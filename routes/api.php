@@ -119,10 +119,11 @@ Route::group(['prefix' => 'v2','middleware' => ['XssSanitizer','throttle:60,1','
             // Wallets
             Route::post('/users/wallets/{id}/list', 'WalletsController@getlistWallet');
             Route::post('/users/wallets/{symbol}/crypto-single', 'WalletsController@getSingleCryptoWallet');
-            Route::post('/users/wallets/{id_wallet}/crypto-transaction', 'WalletsController@transactionCryptoWallet');
-            Route::post('/users/wallets/{id_wallet}/crypto-balance-fixation', 'WalletsController@fixationCryptoWallet');
-            Route::post('/users/wallets/{id_wallet}/internal-single', 'WalletsController@getSingleInternalWallet');
-            Route::post('/users/wallets/{id_wallet}/internal-transaction', 'WalletsController@transactioneInternalWallet');
+
+            Route::post('/users/wallets/{id_user}/crypto-transaction', 'WalletsController@transactionCryptoWallet');
+            Route::post('/users/wallets/{id_user}/crypto-balance-fixation', 'WalletsController@fixationCryptoWallet');
+            Route::post('/users/wallets/{id_user}/internal-single', 'WalletsController@getSingleInternalWallet');
+            Route::post('/users/wallets/{id_user}/internal-transaction', 'WalletsController@transactioneInternalWallet');
 
 
             // Card Bank

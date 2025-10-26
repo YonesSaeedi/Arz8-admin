@@ -5,13 +5,12 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Cryptocurrency;
 use App\Models\GiftWheel;
-use App\Models\WalletsCrypto;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Morilog\Jalali;
 use App\Models\User;
 use App\Models\Orders;
 use App\Models\Trades;
-use App\Models\WalletsInternal;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Async\Pool;
 
@@ -36,8 +35,8 @@ class DashboardContoller extends Controller
         $statistics->users = User::count(); // محاسبه تعداد کاربران
         $statistics->orders = Orders::where('status', 'success')->where('id_user', '!=', 1)->count();
         $statistics->trades = Trades::where('status', 'success')->count();
-        $statistics->balance_toman = round(WalletsInternal::sum('value_num'));
-        $statistics->balance_theter = WalletsCrypto::where('id_crypto', 5)->sum('value_num');
+        $statistics->balance_toman = round(Wallet::where('type', Wallet::TYPE_CURRENCY)->sum('balance'));
+        $statistics->balance_theter = Wallet::where('id_crypto', 5)->where('type', Wallet::TYPE_ASSET)->sum('balance');
         $result->statistics = $statistics;
 
 
@@ -58,9 +57,10 @@ class DashboardContoller extends Controller
 
 
         $cryptos = Cryptocurrency::query();
-        $cryptos->leftJoin('users_wallets_crypto', 'users_wallets_crypto.id_crypto', 'cryptocurrency.id');
-        $cryptos->where('value_num', '>', 0);
-        $cryptos->selectRaw('SUM(ROUND(users_wallets_crypto.value_num * JSON_EXTRACT(cryptocurrency.data, "$.price_usdt"), 4)) as balance_usdt');
+        $cryptos->leftJoin('users_wallets', 'users_wallets.id_crypto', 'cryptocurrency.id');
+        $cryptos->where('users_wallets.type', Wallet::TYPE_ASSET);
+        $cryptos->where('users_wallets.balance', '>', 0);
+        $cryptos->selectRaw('SUM(ROUND(users_wallets.balance * JSON_EXTRACT(cryptocurrency.data, "$.price_usdt"), 4)) as balance_usdt');
         $cryptos = $cryptos->first();
         $result->statistics->all_balance_usdt = $cryptos->balance_usdt ?? 0;
         $result->statistics->time = time() * 1000;

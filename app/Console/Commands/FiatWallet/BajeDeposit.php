@@ -8,6 +8,7 @@ use App\Models\PaymentGateway\Baje;
 use App\Models\TransactionInternal;
 use App\Models\User;
 use App\Models\UserCardBank;
+use App\Services\Wallets\WalletsService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use App\Models\PaymentGateway\PaymentGateway;
@@ -24,6 +25,8 @@ class BajeDeposit extends Command
      */
     protected $signature = 'baje:deposit';
 
+    private WalletsService $walletsService;
+
     /**
      * The console command description.
      *
@@ -37,9 +40,10 @@ class BajeDeposit extends Command
      * @return void
      */
 
-    public function __construct()
+    public function __construct(WalletsService $walletsService)
     {
         parent::__construct();
+        $this->walletsService = $walletsService;
     }
 
     /**
@@ -76,16 +80,15 @@ class BajeDeposit extends Command
                     $amount = round($transaction['amount'] / 10);
                     $user = User::where('id', $cardbank->id_user)->first();
 
-                    $wallet = \App\Models\WalletsInternal::where('id_internal', $user->id_internal)->where('id_user', $user->id)->first();
-                    if (!isset($wallet)) {
-                        $wallet = $ctr->createWalletInternal($user->id_internal, $user->id);
-                    }
-                    $balance = round(Crypt::decryptString($wallet->value));
-                    $balance_available = round(Crypt::decryptString($wallet->value_available));
-
                     $TraInternalExist = TransactionInternal::where(['status' => 'success', 'type' => 'deposit', 'id_user' => $user->id,])->whereJsonContains('data->baje->id', $transaction['id'])->first();
                     if (!isset($TraInternalExist)) {
                         $finalAmount = $this->calculateAmountAfterFee($amount);
+
+                        // واریز به کیف پول تومانی
+                        $walletData = $this->walletsService->getWalletFiat($user->id, true);
+                        $wallet = $walletData->wallet;
+
+                        $success = $wallet->deposit($finalAmount);
 
                         $TraInternal = new TransactionInternal();
                         $TraInternal->type = 'deposit';
@@ -95,17 +98,11 @@ class BajeDeposit extends Command
                         $TraInternal->id_internalcurrency = $user->id_internal;
                         $TraInternal->status = 'success';
                         $TraInternal->amount = $finalAmount;
-                        $TraInternal->stock = $balance + $finalAmount;
+                        $TraInternal->stock = (float) $wallet->balance;
                         $TraInternal->payment_gateway = 'baje';
                         $data = (object)array('fee_usdt'=> $this->getFeeUsdt(),'baje' => $transaction);
                         $TraInternal->data = json_encode($data);
                         $TraInternal->save();
-
-                        $wallet->value = Crypt::encryptString($balance + $finalAmount);
-                        $wallet->value_available = Crypt::encryptString($balance_available + $finalAmount);
-                        $wallet->value_num = $balance + $finalAmount;
-                        $wallet->value_available_num = $balance_available + $finalAmount;
-                        $wallet->save();
 
                         $ctr->sendNotification($user->id, 'depositId',
                             ['amount' => number_format($amount), 'sms' => [number_format($amount)]]);

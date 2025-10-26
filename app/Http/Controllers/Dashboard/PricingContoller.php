@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Exchange\ExchangeApi;
 use App\Models\Cryptocurrency;
 use App\Models\Settings;
-use App\Models\WalletsCrypto;
+use App\Models\Wallet;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt as Crypt;
 use Spatie\Async\Pool;
@@ -120,7 +120,9 @@ class PricingContoller extends ExchangeApi
         }
 
 
-        $balanceUsdt_users = WalletsCrypto::where('id_crypto', 5)->sum('value_num');
+        $balanceUsdt_users = Wallet::where('id_crypto', 5)
+            ->where('type', Wallet::TYPE_ASSET)
+            ->sum('balance');
         $result->sum_balance_net = $result->sum_balance - $balanceUsdt_users;
 
         return $result;

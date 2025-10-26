@@ -8,27 +8,30 @@ use App\Models\CryptoNetwork;
 use App\Models\Settings;
 use App\Models\TransactionCrypto;
 use App\Models\TransactionInternal;
-use App\Models\WalletsCrypto;
-use App\Models\WalletsInternal;
+use App\Models\Wallet;
 use Crypt;
 use DB;
 use Illuminate\Http\Request;
-use Mdanter\Ecc\Math\DebugDecorator;
+use App\Services\Wallets\WalletsService;
 
 class CryptoController extends ExchangeApi
 {
+    private WalletsService $walletsService;
     public $path_logo;
     public $settings;
-    public function __construct()
+
+    public function __construct(WalletsService $walletsService)
     {
+        $this->walletsService = $walletsService;
+
         //$path = base_path('').env('PATH_PANEL').'/'.env('PUBLIC_USER').'/images/currency';
         //$this->path_logo = str_replace(env('PATH_ADMIN_PANEL'),'',$path);
         $path = public_path().'/images/currency';
         $this->path_logo = str_replace(env('PATH_ADMIN_PANEL'),env('PATH_PANEL'),$path);
         $this->path_logo = str_replace('sorg.ir-v3/public','app/api',$this->path_logo);
         $this->settings = array('font'=>false,'wage_buy'=> '0','wage_sell'=>'0' ,'hidden'=>false,
-                                'price_usdt_satatus'=>true,'price_usdt'=>0,
-                                'exchange_account'=>0);
+            'price_tether_satatus'=>true,'fee_buy'=>30000,'fee_sell'=>30000, 'percent_buy'=>0,'percent_sell'=>0,
+            'stock_api'=> true, 'stock'=>0,'exchange_account'=>0);
         parent::__construct();
     }
 
@@ -38,26 +41,31 @@ class CryptoController extends ExchangeApi
         $result = (object)array();
         $cryptos = Cryptocurrency::query();
 
-        // Filters
+// Filters
         $cryptos = self::filters($cryptos,$request);
         $usersCount = $cryptos->count();
 
-        $cryptos->leftJoin('users_wallets_crypto','users_wallets_crypto.id_crypto','cryptocurrency.id')->groupBy('cryptocurrency.id');
+// تغییر users_wallets_crypto به users_wallets با شرط type
+        $cryptos->leftJoin('users_wallets', function($join) {
+            $join->on('users_wallets.id_crypto', '=', 'cryptocurrency.id')
+                ->where('users_wallets.type', Wallet::TYPE_ASSET);
+        })->groupBy('cryptocurrency.id');
+
         $cryptos->leftJoin('cryptocurrency_wage_trade','cryptocurrency_wage_trade.id_crypto','cryptocurrency.id')->groupBy('cryptocurrency.id');
         $cryptos->leftJoin('cryptocurrency_little','cryptocurrency_little.id_crypto','cryptocurrency.id')->groupBy('cryptocurrency.id');
         $cryptos->select(
             'cryptocurrency.id','cryptocurrency.symbol','cryptocurrency.icon','cryptocurrency.name','cryptocurrency.sort','cryptocurrency.percent',
             'cryptocurrency.buy_status','cryptocurrency.sell_status','cryptocurrency.withdraw_auto',
-            DB::raw("ROUND(SUM(users_wallets_crypto.value_num),percent) as balance_users")
+            DB::raw("ROUND(SUM(users_wallets.balance),percent) as balance_users")
         );
         $cryptos->selectRaw('@price_usdt := JSON_EXTRACT(data, "$.price_usdt")*1 as price_usdt');
-        $cryptos->selectRaw('SUM(users_wallets_crypto.value_num) * (JSON_EXTRACT(data, "$.price_toman_buy")) as balance_users_toman_buy');
-        $cryptos->selectRaw('SUM(users_wallets_crypto.value_num) * (JSON_EXTRACT(data, "$.price_toman_sell")) as balance_users_toman_sell');
+        $cryptos->selectRaw('SUM(users_wallets.balance) * (JSON_EXTRACT(data, "$.price_toman_buy")) as balance_users_toman_buy');
+        $cryptos->selectRaw('SUM(users_wallets.balance) * (JSON_EXTRACT(data, "$.price_toman_sell")) as balance_users_toman_sell');
 
 
         $cryptos->selectRaw("
             ROUND(
-                SUM(users_wallets_crypto.value_num) -
+                SUM(users_wallets.balance) -
                 (
                     COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data, '$.balance.sum_all')) * 1, 0) +
                     COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings, '$.coolwallet')) * 1, 0) +
@@ -71,7 +79,7 @@ class CryptoController extends ExchangeApi
         $cryptos->selectRaw("
             ROUND(
                 (
-                    SUM(users_wallets_crypto.value_num) -
+                    SUM(users_wallets.balance) -
                     (
                         COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data, '$.balance.sum_all')) * 1, 0) +
                         COALESCE(JSON_UNQUOTE(JSON_EXTRACT(settings, '$.coolwallet')) * 1, 0) +
@@ -82,8 +90,6 @@ class CryptoController extends ExchangeApi
                 percent
             ) as balance_other_wallet_usdt
         ");
-
-
 
 
 
@@ -308,7 +314,7 @@ class CryptoController extends ExchangeApi
         $name = strtolower(str_replace(' ','-',$request->name));
         $symbol = strtoupper($request->symbol);
         $cryptoExist = Cryptocurrency::where('name',$name)->orWhere('symbol',$symbol)
-                                            ->orWhereRaw('JSON_CONTAINS(locale,?)', [json_encode(array('fa' =>array('name'=>$request->nameFa)))])->first();
+            ->orWhereRaw('JSON_CONTAINS(locale,?)', [json_encode(array('fa' =>array('name'=>$request->nameFa)))])->first();
         if(isset($cryptoExist))
             return array('status' => false, 'msg' => 'نام یا نام فارسی یا نماد ارز تکراری است و از قبل وجود دارد.');
 
@@ -394,9 +400,18 @@ class CryptoController extends ExchangeApi
         $crypto->network = json_decode($crypto->network);
 
         $statistic = (object)[];
-        $statistic->userBalance = WalletsCrypto::where('id_crypto',$crypto->id)->where('value_num','>',0)->count();
-        $statistic->allBalance = WalletsCrypto::where('id_crypto',$crypto->id)->sum('value_num');
-        $statistic->allBalanceAvailable = WalletsCrypto::where('id_crypto',$crypto->id)->sum('value_available_num');
+        $statistic->userBalance = Wallet::where('id_crypto', $crypto->id)
+            ->where('type', Wallet::TYPE_ASSET)
+            ->where('balance', '>', 0)
+            ->count();
+
+        $statistic->allBalance = Wallet::where('id_crypto', $crypto->id)
+            ->where('type', Wallet::TYPE_ASSET)
+            ->sum('balance');
+
+        $statistic->allBalanceAvailable = Wallet::where('id_crypto', $crypto->id)
+            ->where('type', Wallet::TYPE_ASSET)
+            ->sum('available_balance');
         $statistic->littleBalance = CryptoLittle::where('id_crypto',$crypto->id)->sum('amount_coin');
         $statistic->wageTrades = DB::table('cryptocurrency_wage_trade')->where('id_crypto',$crypto->id)->first()->amount_coin??0;
 
@@ -405,7 +420,7 @@ class CryptoController extends ExchangeApi
         //dd($statistic->balance->sum_balance);
 
         $statistic->otherBalance = $statistic->allBalanceAvailable -
-                                        ($statistic->balance->sum_balance + ($settings->coolwallet??0) + $statistic->wageTrades + ($statistic->littleBalance * -1));
+            ($statistic->balance->sum_balance + ($settings->coolwallet??0) + $statistic->wageTrades + ($statistic->littleBalance * -1));
 
 
         // list account exchange
@@ -432,7 +447,7 @@ class CryptoController extends ExchangeApi
 
     function balanceExchange($symbol){
         $result = (object)array();
-        $result->balance = ['binance'=>[],'kucoin'=>[],'coinex'=>[],'exonyx'=>0];
+        $result->balance = ['binance'=>[],'kucoin'=>[],'coinex'=>[]];
         $result->sum_balance = 0;
 
 
@@ -489,22 +504,6 @@ class CryptoController extends ExchangeApi
             }
         }
 
-
-        try {
-            if ($symbol == 'USDT' || $symbol == 'TRX'):
-                $response = \Http::withHeaders([
-                    'accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'apiKey' => 'BEr4WdSiFIQoFxbcEJ86P22G7mfhcBQoQTq7KbS2zx1dfjRiNzs8PLytIeOtISCnsRQwOH2BbhJffluIM1WXxnZVtC4nLfFIB2ziOwKlSRsX8lSruobAAiEEmtkBrxFrzxewM9OllpQEncpDQRwva9Sji6vYsCycVF07jsSkAMPcA4cN5nCXhpmpBNpH79y',
-                ])->timeout(10)->get('https://api.exonyx.com/api/v1/reseller' . '/wallet/index');
-                $response = (object)$response->throw()->json();
-                $indexArrayFind = (string)array_search($symbol, array_column($response->data, 'currency'));
-                $result->balance['exonyx'] = (float)$response->data[$indexArrayFind]['balance'];
-                $result->sum_balance += $result->balance['exonyx'];
-            endif;
-        }catch (\Exception $e){
-        }
-
         return $result;
     }
 
@@ -536,7 +535,6 @@ class CryptoController extends ExchangeApi
             'name' => 'required',
             'color' => 'required',
             'percent' => 'required|numeric',
-            'symbol' => 'required',
             'file' => 'nullable|mimes:svg,png|max:20500',
             'settings' => 'required',
             //'networkDefault' => 'required|numeric',
@@ -620,7 +618,6 @@ class CryptoController extends ExchangeApi
         }
 
         $crypto->name = $name;
-        $crypto->symbol = $request->symbol;
         $crypto->deposit = $request->deposit;
         $crypto->withdraw = $request->withdraw;
         $crypto->withdraw_auto = $request->withdraw_auto;
@@ -637,12 +634,13 @@ class CryptoController extends ExchangeApi
 
     function balanceUsers(Request $request){
         $limit = isset($request->perPage) && $request->perPage <= 100 ? $request->perPage : 10;
-        $offset = (($request->page - 1) ?? 0) *$limit;
+        $offset = (($request->page - 1) ?? 0) * $limit;
 
         $result = (object)array();
-        $query = WalletsCrypto::query();
-        $query->where('id_crypto',$request->id);
-        $query->where('value_num','>',0);
+        $query = Wallet::query();
+        $query->where('id_crypto', $request->id)
+            ->where('type', Wallet::TYPE_ASSET)
+            ->where('balance', '>', 0);
 
         switch ($request->sortBy){
             case 'nameFamily': $sortBy = 'users.name'; break;
@@ -650,7 +648,7 @@ class CryptoController extends ExchangeApi
             case 'logo': $sortBy = 'cryptocurrency.id'; break;
             case 'balanceUsdt': $sortBy = 'balance_usdt'; break;
             case 'balanceUsersToman': $sortBy = 'balance_toman_buy'; break;
-            case 'id': $sortBy = 'users_wallets_crypto.id'; break;
+            case 'id': $sortBy = 'users_wallets.id'; break;
             default: $sortBy = $request->sortBy;
         }
 
@@ -663,22 +661,20 @@ class CryptoController extends ExchangeApi
             });
         }
         if(isset($sortBy))
-            $query->orderBy($sortBy,$request->sortDesc?'desc':'asc');
+            $query->orderBy($sortBy, $request->sortDesc ? 'desc' : 'asc');
 
-
-        $query->leftJoin('users','users_wallets_crypto.id_user','users.id');
-        $query->leftJoin('cryptocurrency','users_wallets_crypto.id_crypto','cryptocurrency.id');
+        $query->leftJoin('users', 'users_wallets.id_user', 'users.id');
+        $query->leftJoin('cryptocurrency', 'users_wallets.id_crypto', 'cryptocurrency.id');
         $totalCount = $query->count();
 
-        $query->select('cryptocurrency.symbol','users.name','users.id as id_user','users.family','users.email','users.level');
-        $query->selectRaw(DB::raw("ROUND(users_wallets_crypto.value_num,percent) as balance"));
-        $query->selectRaw('ROUND(users_wallets_crypto.value_num * JSON_EXTRACT(cryptocurrency.data, "$.price_usdt") ,4) as balance_usdt');
-        $query->selectRaw('ROUND(users_wallets_crypto.value_num * JSON_EXTRACT(cryptocurrency.data, "$.price_toman_buy") ,percent) as balance_toman_buy');
-        $query->selectRaw('ROUND(users_wallets_crypto.value_num * JSON_EXTRACT(cryptocurrency.data, "$.price_toman_sell") ,percent) as balance_toman_sell');
+        $query->select('cryptocurrency.symbol', 'users.name', 'users.id as id_user', 'users.family', 'users.email', 'users.level');
+        $query->selectRaw("ROUND(users_wallets.balance, cryptocurrency.percent) as balance");
+        $query->selectRaw('ROUND(users_wallets.balance * JSON_EXTRACT(cryptocurrency.data, "$.price_usdt"), 4) as balance_usdt');
+        $query->selectRaw('ROUND(users_wallets.balance * JSON_EXTRACT(cryptocurrency.data, "$.price_toman_buy"), cryptocurrency.percent) as balance_toman_buy');
+        $query->selectRaw('ROUND(users_wallets.balance * JSON_EXTRACT(cryptocurrency.data, "$.price_toman_sell"), cryptocurrency.percent) as balance_toman_sell');
 
         $query->limit($limit)->offset($offset);
         $wallets = $query->get();
-
 
         $result->lists = $wallets;
         $result->total = $totalCount;
@@ -700,7 +696,7 @@ class CryptoController extends ExchangeApi
         if(\Auth::user()->role =='admin'):
             $cryptoNetwork = CryptoNetwork::where('id',$request->network)->first();
             $crypto = Cryptocurrency::where('id',$request->id)->
-                                whereRaw('JSON_CONTAINS(network, ?)', [json_encode(array('id_network' => $cryptoNetwork->id))])->first();
+            whereRaw('JSON_CONTAINS(network, ?)', [json_encode(array('id_network' => $cryptoNetwork->id))])->first();
             $settings = json_decode($crypto->settings??'{}');
             $index_account = $settings->exchange_account??0;
             if(isset($crypto) && isset($cryptoNetwork)){
@@ -840,70 +836,63 @@ class CryptoController extends ExchangeApi
                 }else if($otp['status'] != true)
                     return response()->json($otp);
 
-                $price = $feeUsdt * $this->priceUsdtInToman()['sell'];
-                $wallets = WalletsCrypto::where('id_crypto',$request->id)->where('value_num','>',0)->get();
+                $price = $feeUsdt * $this->feeUsdt()['sell'];
+                $wallets = Wallet::where('id_crypto',$request->id)
+                    ->where('type', Wallet::TYPE_ASSET)
+                    ->where('balance','>',0)
+                    ->get();
+
                 foreach ($wallets as $wallet){
                     DB::beginTransaction();
                     try{
-                        $balance = Crypt::decryptString($wallet->value);
-                        $balance_available = Crypt::decryptString($wallet->value_available);
+                        $amount = $price * $wallet->available_balance;
 
-                        // Internal pluse
-                        $amount = $price*$balance_available;
-                        $walletInternal = WalletsInternal::where('id_user',$wallet->id_user)->first();
-                        if(!isset($walletInternal)){
-                            $walletInternal = new WalletsInternal();
-                            $walletInternal->id_user = $wallet->id_user;
-                            $walletInternal->id_internal = 1;
-                            $walletInternal->value = Crypt::encryptString(0);
-                            $walletInternal->value_available = Crypt::encryptString(0);
-                            $walletInternal->save();
+                        // دریافت یا ایجاد ولت تومانی
+                        $tomanWalletData = $this->walletsService->getWalletFiat($wallet->id_user, true);
+                        $tomanWallet = $tomanWalletData->wallet;
+
+                        // واریز به ولت تومانی
+                        $depositSuccess = $tomanWallet->deposit($amount);
+                        if (!$depositSuccess) {
+                            throw new \Exception('خطا در واریز به کیف پول تومانی');
                         }
-                        $balanceInternal = Crypt::decryptString($walletInternal->value);
-                        $balance_availableInternal = Crypt::decryptString($walletInternal->value_available);
-                        $walletInternal->value = Crypt::encryptString($balanceInternal + $amount);
-                        $walletInternal->value_available = Crypt::encryptString($balance_availableInternal + $amount);
-                        $walletInternal->value_num = $balanceInternal + $amount;
-                        $walletInternal->value_available_num = $balance_availableInternal + $amount;
-                        $walletInternal->Save();
 
                         $transaction = new TransactionInternal();
                         $transaction->id_internalcurrency = 1;
-                        $transaction->id_user = $walletInternal->id_user;
+                        $transaction->id_user = $wallet->id_user;
                         $transaction->type = 'deposit';
                         $transaction->amount = $amount;
                         $transaction->payment = $amount;
                         $transaction->status = 'success';
                         $transaction->description = 'فروش و تبدیل ارز '.$crypto->symbol;
                         $transaction->id_admin = \Auth::user()->id;
-                        $transaction->stock = $walletInternal->value_num;
+                        $transaction->stock = (float) $tomanWallet->balance;
                         $transaction->save();
 
-                        // Crypto zero
-                        $wallet->value = Crypt::encryptString('0');
-                        $wallet->value_available = Crypt::encryptString('0');
-                        $wallet->value_num = 0;
-                        $wallet->value_available_num = 0;
-                        $wallet->save();
+                        // برداشت از ولت رمزارز
+                        $withdrawSuccess = $wallet->withdraw($wallet->balance);
+                        if (!$withdrawSuccess) {
+                            throw new \Exception('خطا در برداشت از کیف پول رمزارز');
+                        }
 
                         $transaction = new TransactionCrypto;
                         $transaction->id_crypto = $crypto->id;
                         $transaction->id_user = $wallet->id_user;
                         $transaction->type = 'withdraw';
-                        $transaction->amount = $balance_available;
-                        $transaction->payment = $balance_available;
+                        $transaction->amount = $wallet->balance;
+                        $transaction->payment = $wallet->balance;
                         $transaction->status = 'success';
                         $transaction->description = 'فروش و تبدیل به تومان';
                         $transaction->amount_toman = $amount;
                         $transaction->id_admin = \Auth::user()->id;
-                        $transaction->stock = $wallet->value_num;
+                        $transaction->stock = (float) $wallet->balance;
                         $transaction->save();
 
                         DB::commit();
 
                     }catch (\Exception $e){
                         DB::rollback();
-                        dd($e);
+                        \Log::error('Change all balance failed: ' . $e->getMessage());
                     }
                 }
                 return array('status' => true, 'msg' =>'موجودی همه کاربران با موفقیت به تومان تبدیل شد!');
@@ -918,7 +907,10 @@ class CryptoController extends ExchangeApi
         if(\Auth::user()->role =='admin'):
             $crypto = Cryptocurrency::where('id',$request->id)->first();
             if(isset($crypto)){
-                $allBalanceAvailable = WalletsCrypto::where('id_crypto',$crypto->id)->sum('value_available_num');
+                $allBalanceAvailable = Wallet::where('id_crypto',$crypto->id)
+                    ->where('type', Wallet::TYPE_ASSET)
+                    ->sum('available_balance');
+
                 $balance = self::balanceExchange($crypto->symbol);
                 $settings = json_decode($crypto->settings??'{}');
                 $wageTrades = DB::table('cryptocurrency_wage_trade')->where('id_crypto',$crypto->id)->first()->amount_coin??0;
@@ -963,16 +955,20 @@ class CryptoController extends ExchangeApi
             $success = 0;
             $failer = 0;
             $minLimit = 0;
+
             $little = new CryptoLittleController();
             foreach ($cryptos as $crypto){
-                $allBalanceAvailable = WalletsCrypto::where('id_crypto',$crypto->id)->sum('value_available_num');
+                $allBalanceAvailable = Wallet::where('id_crypto', $crypto->id)
+                    ->where('type', Wallet::TYPE_ASSET)
+                    ->sum('available_balance');
+
                 $balance = self::balanceExchange($crypto->symbol);
-                $settings = json_decode($crypto->settings??'{}');
-                $wageTrades = DB::table('cryptocurrency_wage_trade')->where('id_crypto',$crypto->id)->first()->amount_coin??0;
-                $littleBalance = CryptoLittle::where('id_crypto',$crypto->id)->sum('amount_coin');
+                $settings = json_decode($crypto->settings ?? '{}');
+                $wageTrades = DB::table('cryptocurrency_wage_trade')->where('id_crypto', $crypto->id)->first()->amount_coin ?? 0;
+                $littleBalance = CryptoLittle::where('id_crypto', $crypto->id)->sum('amount_coin');
 
                 $otherBalance = $allBalanceAvailable -
-                    ($balance->sum_balance + ($settings->coolwallet??0) + $wageTrades + ($littleBalance * -1));
+                    ($balance->sum_balance + ($settings->coolwallet ?? 0) + $wageTrades + ($littleBalance * -1));
 
 
                 $minTrade = $little->minTrade($crypto);
@@ -994,7 +990,7 @@ class CryptoController extends ExchangeApi
                     $success++;
                 }else
                     $failer++;
-                    //$result = array('status' => false, 'msg' => 'متاسفانه انجام نشد و نتیجه در ترید های اتوماتیک ثبت شده است.'.$trade->msg);
+                //$result = array('status' => false, 'msg' => 'متاسفانه انجام نشد و نتیجه در ترید های اتوماتیک ثبت شده است.'.$trade->msg);
 
                 $trade_auto->amount_coin = $trade->amount_coin;
                 $trade_auto->side = strtolower($type);
@@ -1002,7 +998,7 @@ class CryptoController extends ExchangeApi
                 $trade_auto->save();
             }
 
-        return  array('status' => true, 'msg' => 'موفق:'.$success .' | ناموفق:' .$failer.' | حداقل مجاز:'.$minLimit);
+            return  array('status' => true, 'msg' => 'موفق:'.$success .' | ناموفق:' .$failer.' | حداقل مجاز:'.$minLimit);
         endif;
     }
 }

@@ -98,24 +98,13 @@ class Controller extends BaseController
         }
     }
 
-    function createWallet($id_crypto,$id_user){
-        $wallet = new \App\Models\WalletsCrypto();
-        $wallet->id_user = $id_user;
-        $wallet->id_crypto = $id_crypto;
-        $wallet->value = Crypt::encryptString(0);
-        $wallet->value_available = Crypt::encryptString(0);
-        $wallet->save();
-        return $wallet;
+    function createWallet($id_crypto, $id_user){
+        $crypto = \App\Models\Cryptocurrency::find($id_crypto);
+        return \App\Models\Wallet::createAssetWallet($id_user, $id_crypto, $crypto->symbol);
     }
 
     function createWalletInternal($id_internal,$id_user){
-        $wallet = new \App\Models\WalletsInternal();
-        $wallet->id_user = $id_user;
-        $wallet->id_internal = $id_internal;
-        $wallet->value = Crypt::encryptString(0);
-        $wallet->value_available = Crypt::encryptString(0);
-        $wallet->save();
-        return $wallet;
+        return \App\Models\Wallet::createTomanWallet($id_user);
     }
 
     function OTP($nameOtp,$codeReceive=null){

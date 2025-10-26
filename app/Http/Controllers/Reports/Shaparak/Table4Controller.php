@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Reports\Shaparak;
 
 use App\Http\Controllers\Controller;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
@@ -34,13 +35,14 @@ class Table4Controller extends Controller
             $file = fopen('php://output', 'w');
             fputcsv($file, self::HEADERS);
 
-            DB::table('users_wallets_crypto')
-                ->join('users', 'users.id', '=', 'users_wallets_crypto.id_user')
-                ->select('users_wallets_crypto.id_crypto', 'users.national_code', 'users_wallets_crypto.value_num')
-                ->where('users_wallets_crypto.value_num', '>', 0)
+            DB::table('users_wallets')
+                ->join('users', 'users.id', '=', 'users_wallets.id_user')
+                ->select('users_wallets.id_crypto', 'users.national_code', 'users_wallets.balance')
+                ->where('users_wallets.type', Wallet::TYPE_ASSET)
+                ->where('users_wallets.balance', '>', 0)
                 ->whereNotNull('users.national_code')
-                ->whereNotIn('users_wallets_crypto.id_user', [43, 638, 1])
-                ->orderBy('users_wallets_crypto.id_user')
+                ->whereNotIn('users_wallets.id_user', [43, 638, 1])
+                ->orderBy('users_wallets.id_user')
                 ->chunk(1000, function ($records) use ($file, $cryptoMap) {
                     foreach ($records as $row) {
                         fputcsv($file, [
@@ -49,7 +51,7 @@ class Table4Controller extends Controller
                             $row->national_code,
                             json_encode([
                                 $cryptoMap[$row->id_crypto] ?? '',
-                                ($row->value_num < 0.0001 && $row->value_num != 0) ? sprintf('%f', $row->value_num) : $row->value_num
+                                ($row->balance < 0.0001 && $row->balance != 0) ? sprintf('%f', $row->balance) : $row->balance
                             ])
                         ]);
                     }

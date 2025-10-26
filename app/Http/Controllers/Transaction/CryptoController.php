@@ -9,7 +9,7 @@ use App\Models\Orders;
 use App\Models\Trades;
 use App\Models\TransactionCrypto;
 use App\Models\User;
-use App\Models\WalletsCrypto;
+use App\Services\Wallets\WalletsService;
 use Crypt;
 use DB;
 use Illuminate\Http\Request;
@@ -17,6 +17,12 @@ use Morilog\Jalali;
 
 class CryptoController extends ExchangeApi
 {
+    private WalletsService $walletsService;
+    public function __construct(WalletsService $walletsService)
+    {
+        $this->walletsService = $walletsService;
+    }
+
     function listCrypto(Request $request)
     {
 
@@ -237,22 +243,15 @@ class CryptoController extends ExchangeApi
             $transaction->save();
 
             //get Balance
-            $wallet = WalletsCrypto::where('id_crypto',$crypto->id)->where('id_user',$user->id)->first();
-            if(!$wallet)
-                $wallet = self::createWallet($crypto->id,$user->id);
-            $balance = Crypt::decryptString($wallet->value);
-            $balance_available = Crypt::decryptString($wallet->value_available);
-            $balance = self::cutFloatNumber($balance,$crypto->percent);
-            $balance_available = self::cutFloatNumber($balance_available,$crypto->percent);
+            $walletData = $this->walletsService->getWalletCrypto($user->id, $crypto->id, true);
+            $wallet = $walletData->wallet;
 
-            $wallet = WalletsCrypto::where('id_crypto',$crypto->id)->where('id_user', $user->id)->first();
-            $b = self::cutFloatNumber($balance + $transaction->amount,$crypto->percent);
-            $ba = self::cutFloatNumber($balance_available + $transaction->amount,$crypto->percent);
-            $wallet->value = Crypt::encryptString($b);
-            $wallet->value_available = Crypt::encryptString($ba);
-            $wallet->value_num = $b;
-            $wallet->value_available_num = $ba;
-            $wallet->save();
+            $success = $wallet->deposit($transaction->amount);
+
+            if (!$success) {
+                throw new \Exception('خطا در واریز به کیف پول رمزارز');
+            }
+
             DB::commit();
 
             // send Notif
@@ -380,22 +379,12 @@ class CryptoController extends ExchangeApi
                 return array('status'=>true ,'msg'=>'تراکنش با موفقیت رد شد.');
             }else{
                 //get Balance
-                $wallet = WalletsCrypto::where('id_crypto',$crypto->id)->where('id_user',$user->id)->first();
-                if (!isset($wallet))
-                    $wallet = $this->createWallet($crypto->id,$user->id);
-                $balance = Crypt::decryptString($wallet->value);
-                $balance_available = Crypt::decryptString($wallet->value_available);
-                $balance = self::cutFloatNumber($balance,$crypto->percent);
-                $balance_available = self::cutFloatNumber($balance_available,$crypto->percent);
-
-                $wallet = WalletsCrypto::where('id_crypto',$crypto->id)->where('id_user', $user->id)->first();
-                $b = self::cutFloatNumber($balance + $transaction->amount,$crypto->percent);
-                $ba = self::cutFloatNumber($balance_available + $transaction->amount,$crypto->percent);
-                $wallet->value = Crypt::encryptString($b);
-                $wallet->value_available = Crypt::encryptString($ba);
-                $wallet->value_num = $b;
-                $wallet->value_available_num = $ba;
-                $wallet->save();
+                $walletData = $this->walletsService->getWalletCrypto($user->id, $crypto->id, true);
+                $wallet = $walletData->wallet;
+                $success = $wallet->deposit($transaction->amount);
+                if (!$success) {
+                    throw new \Exception('خطا در واریز به کیف پول رمزارز');
+                }
                 DB::commit();
 
                 // send Notif

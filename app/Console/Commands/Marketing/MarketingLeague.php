@@ -5,13 +5,13 @@ namespace App\Console\Commands\Marketing;
 use App\Http\Controllers\Exchange\ExchangeApi;
 use App\Models\Cryptocurrency;
 use App\Models\User;
+use App\Services\Wallets\WalletsService;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt as Crypt;
 use Illuminate\Support\Facades\DB;
 use App\Models\Audit\CostAudit;
 use App\Models\TransactionCrypto;
-use App\Models\WalletsCrypto;
 use App\Http\Controllers\Controller;
 use App\Models\Marketing\MarketingLeague as Ml;
 
@@ -23,6 +23,7 @@ class MarketingLeague extends Command
      * @var string
      */
     protected $signature = 'marketing:league';
+    private WalletsService $walletsService;
 
     /**
      * The console command description.
@@ -36,9 +37,10 @@ class MarketingLeague extends Command
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(WalletsService $walletsService)
     {
         parent::__construct();
+        $this->walletsService = $walletsService;
     }
 
     /**
@@ -138,54 +140,48 @@ class MarketingLeague extends Command
     }
 
 
-    private function transactionCryptoWallet($id_user,$reward,$description){
+    private function transactionCryptoWallet($id_user, $reward, $description){
         $crypto = Cryptocurrency::find($reward->id_crypto);
         $amount = $reward->amount;
 
         $walletCrypto = new ExchangeApi();
         $amountToman = $amount * $walletCrypto->priceToman($crypto)->sell;
 
-        $wallet = WalletsCrypto::where('id_user',$id_user)->where('id_crypto',$crypto->id)->first();
-        if(!isset($wallet)){
-            $controller = new Controller();
-            $wallet = $controller->createWallet($crypto->id,$id_user);
-        }
-
-
+        // دریافت یا ایجاد کیف پول با سرویس جدید
+        $walletData = $this->walletsService->getWalletCrypto($id_user, $crypto->id, true);
+        $wallet = $walletData->wallet;
 
         DB::beginTransaction();
         try {
+            // واریز به کیف پول
+            $success = $wallet->deposit($amount);
+            if (!$success) {
+                throw new \Exception('Failed to deposit to wallet');
+            }
+
             $transaction = new TransactionCrypto;
             $transaction->id_crypto = $crypto->id;
-            $transaction->id_user = $wallet->id_user;
+            $transaction->id_user = $id_user;
             $transaction->type = 'deposit';
             $transaction->amount = $amount;
             $transaction->payment = $amount;
             $transaction->status = 'success';
             $transaction->description = $description;
             $transaction->amount_toman = $amountToman;
-
-            $balance = Crypt::decryptString($wallet->value);
-            $balance_available = Crypt::decryptString($wallet->value_available);
-            $wallet->value = Crypt::encryptString($balance + $amount);
-            $wallet->value_available = Crypt::encryptString($balance_available + $amount);
-            $wallet->value_num = $balance + $amount;
-            $wallet->value_available_num = $balance_available + $amount;
-            $wallet->save();
-
-            $transaction->stock = $wallet->value_num;
+            $transaction->stock = $wallet->balance; // موجودی جدید
             $transaction->save();
-
-
 
             // ثبت در حسابداری
             $description = 'جوایز لیگ ارزهشت';
-            $cust = CostAudit::where('description', $description)->where('created_at','>',date('Y-m-d 00:00:00'))
-                ->where('created_at','<=',date('Y-m-d 00:00:00',strtotime( ' +1 day')))->first();
+            $cust = CostAudit::where('description', $description)
+                ->where('created_at', '>', date('Y-m-d 00:00:00'))
+                ->where('created_at', '<=', date('Y-m-d 00:00:00', strtotime(' +1 day')))
+                ->first();
+
             if(isset($cust->amount)){
-                $cust->amount = $cust->amount+$amountToman;
+                $cust->amount = $cust->amount + $amountToman;
                 $cust->save();
-            }else{
+            } else {
                 $cust = new CostAudit();
                 $cust->amount = $amountToman;
                 $cust->description = $description;

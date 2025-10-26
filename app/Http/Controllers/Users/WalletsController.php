@@ -3,149 +3,162 @@
 namespace App\Http\Controllers\Users;
 
 use App\Models\Cryptocurrency;
-use App\Models\Internalcurrency;
 use App\Models\TransactionCrypto;
 use App\Models\TransactionInternal;
 use App\Models\User;
-use App\Models\WalletsCrypto;
-use App\Models\WalletsInternal;
+use App\Models\Wallet;
+use App\Services\Wallets\WalletsService;
 use Illuminate\Http\Request;
 use Crypt;
 use DB;
 
 class WalletsController extends UsersController
 {
+    private WalletsService $walletsService;
+
+    public function __construct(WalletsService $walletsService)
+    {
+        $this->walletsService = $walletsService;
+    }
     function getlistWallet(Request $request){
-
-        if($request->page == 1 && $request->id==1)
-            self::createWallets($request->id);
-
         $limit = isset($request->perPage) && $request->perPage <= 100 ? $request->perPage : 10;
 
         $result = (object)array();
+
+        // دریافت همه رمزارزها و join با کیف پول کاربر
         $query = Cryptocurrency::query();
-        $query->leftJoin('users_wallets_crypto', function ($join)use ($request) {
-            $join->on('users_wallets_crypto.id_crypto', '=', 'cryptocurrency.id');
-            $join->where('users_wallets_crypto.id_user', '=', $request->id);
+        $query->leftJoin('users_wallets', function($join) use ($request) {
+            $join->on('users_wallets.id_crypto', '=', 'cryptocurrency.id')
+                ->where('users_wallets.id_user', $request->id)
+                ->where('users_wallets.type', Wallet::TYPE_ASSET);
         });
 
-        // Filters
-        $query = self::filters($query,$request);
+        // فیلترها
+        $query = self::filters($query, $request);
         $count = $query->count();
 
+        // انتخاب فیلدها
+        $query->select([
+            'users_wallets.*',
+            'cryptocurrency.id as crypto_id',
+            'cryptocurrency.symbol',
+            'cryptocurrency.percent',
+            'cryptocurrency.name',
+            'cryptocurrency.icon'
+        ]);
 
-        $query->select('users_wallets_crypto.*','cryptocurrency.symbol','cryptocurrency.percent','cryptocurrency.name');
-        $query->selectRaw('ROUND(users_wallets_crypto.value_num * JSON_EXTRACT(cryptocurrency.data, "$.price_usdt") ,4) as balance_usdt');
-        $query->selectRaw('ROUND(users_wallets_crypto.value_num * JSON_EXTRACT(cryptocurrency.data, "$.price_toman_buy") ,percent) as balance_toman_buy');
-        $query->selectRaw('ROUND(users_wallets_crypto.value_num * JSON_EXTRACT(cryptocurrency.data, "$.price_toman_sell") ,percent) as balance_toman_sell');
+        // محاسبه موجودی به دلار و تومان
+        $query->selectRaw('ROUND(COALESCE(users_wallets.balance, 0) * JSON_EXTRACT(cryptocurrency.data, "$.price_usdt"), 4) as balance_usdt');
+        $query->selectRaw('ROUND(COALESCE(users_wallets.balance, 0) * JSON_EXTRACT(cryptocurrency.data, "$.price_toman_buy"), cryptocurrency.percent) as balance_toman_buy');
+        $query->selectRaw('ROUND(COALESCE(users_wallets.balance, 0) * JSON_EXTRACT(cryptocurrency.data, "$.price_toman_sell"), cryptocurrency.percent) as balance_toman_sell');
 
         $wallets = $query->paginate($limit)->items();
+
+        // تبدیل داده‌ها به فرمت مناسب
         foreach ($wallets as $wallet) {
-            if( isset($wallet->value)){
-                $wallet->balance = (float)\Crypt::decryptString($wallet->value);
-                $wallet->balance_available = (float)\Crypt::decryptString($wallet->value_available);
-            }else{
-                $wallet->balance = 0;
-                $wallet->balance_available = 0;
+            $wallet->balance = (float) ($wallet->balance ?? 0);
+            $wallet->balance_available = (float) ($wallet->available_balance ?? 0);
+            $wallet->blocked_balance = (float) ($wallet->blocked_balance ?? 0);
+
+            // اگر ولت وجود نداره، اطلاعات پایه رو ست کن
+            if (!$wallet->id) {
+                $wallet->id = null;
+                $wallet->id_user = $request->id;
+                $wallet->type = Wallet::TYPE_ASSET;
+                $wallet->id_crypto = $wallet->crypto_id;
             }
-
-
-            unset($wallet->value,$wallet->value_available);
         }
 
-        // toman add first table
+        // اضافه کردن کیف پول تومانی به ابتدای لیست
         $user = User::find($request->id);
-        $internal = Internalcurrency::find($user->id_internal);
-        $internalWallet = WalletsInternal::where('id_user',$user->id)->where('id_internal',$user->id_internal)->first();
-        if(!isset($internalWallet))
-            $internalWallet = self::createInternalWallet($user);
-        $internalWallet->balance = (int)\Crypt::decryptString($internalWallet->value);
-        $internalWallet->balance_available = (int)\Crypt::decryptString($internalWallet->value_available);
-        $internalWallet->name = $internal->name;
-        $internalWallet->symbol = $internal->symbol;
-        unset($internalWallet->value,$internalWallet->value_available);
-        array_unshift($wallets,$internalWallet->toArray());
+        $walletData = $this->walletsService->getWalletFiat($user->id);
+        $tomanWallet = $walletData->wallet;
+        $internal = $walletData->internal;
 
+        $tomanWalletArray = [
+            'id' => $tomanWallet->id,
+            'id_user' => $tomanWallet->id_user,
+            'type' => $tomanWallet->type,
+            'currency_code' => $tomanWallet->currency_code,
+            'balance' => (int) $tomanWallet->balance,
+            'balance_available' => (int) $tomanWallet->available_balance,
+            'blocked_balance' => (int) $tomanWallet->blocked_balance,
+            'name' => $internal->name,
+            'symbol' => $internal->symbol,
+            'icon' => null, // یا آیکون مناسب برای تومان
+            'balance_usdt' => 0,
+            'balance_toman_buy' => (int) $tomanWallet->balance,
+            'balance_toman_sell' => (int) $tomanWallet->balance,
+        ];
 
+        array_unshift($wallets, $tomanWalletArray);
 
         $result->lists = $wallets;
-        $result->total = $count;
+        $result->total = $count + 1; // +1 برای کیف پول تومانی
 
         return response()->json($result);
     }
 
-    function filters($query,$request){
+    function filters($query, $request){
         $search = $request->search;
 
         switch ($request->sortBy){
-            case 'coin': $sortBy = 'users_wallets_crypto.id'; break;
+            case 'coin': $sortBy = 'cryptocurrency.id'; break;
             case 'name': $sortBy = 'cryptocurrency.name'; break;
             case 'symbol': $sortBy = 'cryptocurrency.symbol'; break;
-            case 'balance': $sortBy = 'users_wallets_crypto.value_num'; break;
+            case 'balance': $sortBy = 'users_wallets.balance'; break;
             case 'balanceToman': $sortBy = 'balance_toman_buy'; break;
             case 'balanceUsdt': $sortBy = 'balance_usdt'; break;
-            case 'valueAvailable': $sortBy = 'value_available_num'; break;
-
-            default: $sortBy = $request->sortBy;
+            case 'valueAvailable': $sortBy = 'users_wallets.available_balance'; break;
+            default: $sortBy = 'cryptocurrency.sort'; // سورت پیش فرض
         }
 
         if (!empty($search)) {
-            $fields = ['name', 'symbol', 'data', 'locale'];
-            $query = $query->where(function ($query) use ($search, $fields) {
-                foreach ($fields as $field)
-                    $query->orWhere($field, 'like', '%' . $search . '%');
+            $query->where(function ($q) use ($search) {
+                $q->where('cryptocurrency.name', 'like', '%' . $search . '%')
+                    ->orWhere('cryptocurrency.symbol', 'like', '%' . $search . '%')
+                    ->orWhere('cryptocurrency.data', 'like', '%' . $search . '%');
             });
         }
-        if(isset($sortBy))
-            $query->orderBy($sortBy,$request->sortDesc?'desc':'asc');
+
+        if(isset($sortBy)) {
+            // برای فیلدهایی که ممکنه null باشن از COALESCE استفاده کن
+            if (in_array($sortBy, ['users_wallets.balance', 'users_wallets.available_balance'])) {
+                $query->orderByRaw("COALESCE($sortBy, 0) " . ($request->sortDesc ? 'DESC' : 'ASC'))
+                    ->orderBy('cryptocurrency.id', 'asc');
+            } else {
+                $query->orderBy($sortBy, $request->sortDesc ? 'desc' : 'asc')
+                    ->orderBy('cryptocurrency.id', 'asc');
+            }
+        } else {
+            $query->orderBy('cryptocurrency.id', 'asc');
+        }
+
         return $query;
     }
 
-    function createWallets($id_user){
-        $cryptos = Cryptocurrency::all();
-        foreach ($cryptos as $crypto){
-            $wallet = WalletsCrypto::where('id_crypto',$crypto->id)->where('id_user',$id_user)->first();
-            if(!isset($wallet)){
-                $wallet = new WalletsCrypto;
-                $wallet->id_user = $id_user;
-                $wallet->id_crypto = $crypto->id;
-                $wallet->value = \Crypt::encryptString(0);
-                $wallet->value_available = \Crypt::encryptString(0);
-                $wallet->save();
-            }
-        }
-    }
-    function createInternalWallet($user){
-        $wallet = new WalletsInternal;
-        $wallet->id_user = $user->id;
-        $wallet->id_internal = $user->id_internal;
-        $wallet->value = \Crypt::encryptString(0);
-        $wallet->value_available = \Crypt::encryptString(0);
-        $wallet->save();
-        return $wallet;
-    }
 
     function getSingleCryptoWallet(Request $request){
-        $crypto = Cryptocurrency::where('symbol',$request->symbol)->first();
+        $crypto = Cryptocurrency::where('symbol', $request->symbol)->first();
         $user = User::find($request->id_user);
 
-        $wallet = WalletsCrypto::where(['id_crypto'=>$crypto->id,'id_user'=>$user->id])->first();
-        if(!isset($wallet))
-            $wallet = $this->createWallet($crypto->id,$user->id);
+        $walletData = $this->walletsService->getWalletCrypto($user->id, $crypto->id);
+        $wallet = $walletData->wallet;
 
-        $wallet->balance = (float)\Crypt::decryptString($wallet->value);
-        $wallet->balance_available = (float)\Crypt::decryptString($wallet->value_available);
-        unset($wallet->value,$wallet->value_available);
-        $crypto = Cryptocurrency::find($wallet->id_crypto);
+        $wallet->balance = (float) $wallet->balance;
+        $wallet->balance_available = (float) $wallet->available_balance;
         $wallet->symbol = $crypto->symbol;
         $wallet->percent = $crypto->percent;
 
         return array('status' => true, 'msg' => '', 'wallet' => $wallet);
     }
+
     function transactionCryptoWallet(Request $request){
-        $wallet = WalletsCrypto::find($request->id_wallet);
-        $crypto = Cryptocurrency::find($wallet->id_crypto);
-        $crypto_price_toman = json_decode($crypto->data??'{}')->price_toman_buy;
+        $crypto = Cryptocurrency::where('symbol', $request->symbol)->first();
+        $walletData = $this->walletsService->getWalletCrypto($request->id_user, $crypto->id, true);
+        $wallet = $walletData->wallet;
+        $crypto = $walletData->crypto;
+        $crypto_price_toman = json_decode($crypto->data ?? '{}')->price_toman_buy;
 
         DB::beginTransaction();
         try {
@@ -157,34 +170,30 @@ class WalletsController extends UsersController
             $transaction->payment = $request->amount;
             $transaction->status = 'success';
             $transaction->description = $request->description;
-            $transaction->amount_toman = $crypto_price_toman * $wallet->value_num;
+            $transaction->amount_toman = $crypto_price_toman * $wallet->balance;
             $transaction->id_admin = \Auth::user()->id;
 
-            $balance = Crypt::decryptString($wallet->value);
-            $balance_available = Crypt::decryptString($wallet->value_available);
             if($request->type == 'deposit'){
-                $wallet->value = Crypt::encryptString($balance + $request->amount);
-                $wallet->value_available = Crypt::encryptString($balance_available + $request->amount);
-                $wallet->value_num = $balance + $request->amount;
-                $wallet->value_available_num = $balance_available + $request->amount;
-            }else{
-                $wallet->value = Crypt::encryptString($balance - $request->amount);
-                $wallet->value_available = Crypt::encryptString($balance_available - $request->amount);
-                $wallet->value_num = $balance - $request->amount;
-                $wallet->value_available_num = $balance_available - $request->amount;
+                $success = $wallet->deposit($request->amount);
+            } else {
+                $success = $wallet->withdraw($request->amount);
             }
-            $wallet->save();
 
-            $transaction->stock = $wallet->value_num;
+            if (!$success) {
+                throw new \Exception('خطا در انجام عملیات کیف پول');
+            }
+
+            $transaction->stock = (float) $wallet->balance;
             $transaction->save();
             DB::commit();
 
-            self::logSave('users.changeBalanceWallet',$request->all(), 'تغییر موجودی رمزارز کاربر #'.$wallet->id_user,$request->ip());
+            self::logSave('users.changeBalanceWallet', $request->all(), 'تغییر موجودی رمزارز کاربر #'.$wallet->id_user, $request->ip());
             return array('status' => true, 'msg' => 'تراکنش با موفیقت ثبت شد.');
 
         } catch (\Exception $e) {
             DB::rollback();
-            return array('status' => false, 'msg' => $e->getMessage().':'.$e->getLine());
+            \Log::error('Transaction crypto wallet failed: ' . $e->getMessage());
+            return array('status' => false, 'msg' => $e->getMessage());
         }
     }
 
@@ -196,24 +205,24 @@ class WalletsController extends UsersController
         if ($validator->fails())
             return array('status' => false, 'msg' => $validator->errors()->first());
 
-        $wallet = WalletsCrypto::find($request->id_wallet);
-        $crypto = Cryptocurrency::find($wallet->id_crypto);
+        $walletData = $this->walletsService->getWalletCrypto($request->id_user, $request->id_crypto, true);
+        $wallet = $walletData->wallet;
+        $crypto = $walletData->crypto;
 
         DB::beginTransaction();
         try {
-            $balance = Crypt::decryptString($wallet->value);
-            $balance_available = Crypt::decryptString($wallet->value_available);
             if($request->fixationBalanceType == 'balance'){
-                $wallet->value_available = Crypt::encryptString($balance);
-                $wallet->value_available_num = $balance;
-            }else{
-                $wallet->value = Crypt::encryptString($balance_available);
-                $wallet->value_num = $balance_available;
+                // یکسان کردن موجودی در دسترس با موجودی اصلی
+                $wallet->blocked_balance = 0;
+            } else {
+                // یکسان کردن موجودی اصلی با موجودی در دسترس
+                $wallet->blocked_balance = $wallet->balance - $wallet->available_balance;
             }
+
             $wallet->save();
 
             if($request->fixationTransaction != false):
-                $amount = ($request->fixationBalanceType == 'balance') ? $balance : $balance_available;
+                $amount = ($request->fixationBalanceType == 'balance') ? $wallet->balance : $wallet->available_balance;
                 $description = 'یکسان شدن '. (($request->fixationBalanceType == 'balance') ? 'موجودی در دسترس با موجودی' : 'موجودی با موجودی در دسترس');
 
                 $transaction = new TransactionCrypto;
@@ -226,38 +235,40 @@ class WalletsController extends UsersController
                 $transaction->description = $description;
                 $transaction->amount_toman = 0;
                 $transaction->id_admin = \Auth::user()->id;
-                $transaction->stock = $wallet->value_num;
+                $transaction->stock = (float) $wallet->balance;
                 $transaction->save();
             endif;
+
             DB::commit();
 
-            self::logSave('users.changeBalanceWallet',$request->all(), 'یکسان کردن موجودی رمزارز کاربر #'.$wallet->id_user,$request->ip());
+            self::logSave('users.changeBalanceWallet', $request->all(), 'یکسان کردن موجودی رمزارز کاربر #'.$wallet->id_user, $request->ip());
             return array('status' => true, 'msg' => 'یکسان سازی موجود با موفیقت انجام شد.');
 
         } catch (\Exception $e) {
             DB::rollback();
-            return array('status' => false, 'msg' => $e->getMessage().':'.$e->getLine());
+            \Log::error('Fixation crypto wallet failed: ' . $e->getMessage());
+            return array('status' => false, 'msg' => $e->getMessage());
         }
     }
 
 
-
-
-
     function getSingleInternalWallet(Request $request){
-        $wallet = WalletsInternal::find($request->id_wallet);
-        $wallet->balance = (float)\Crypt::decryptString($wallet->value);
-        $wallet->balance_available = (float)\Crypt::decryptString($wallet->value_available);
-        unset($wallet->value,$wallet->value_available);
-        $internal = Internalcurrency::find($wallet->id_internal);
+        $walletData = $this->walletsService->getWalletFiat($request->id_user);
+        $wallet = $walletData->wallet;
+        $internal = $walletData->internal;
+
+        $wallet->balance = (float) $wallet->balance;
+        $wallet->balance_available = (float) $wallet->available_balance;
         $wallet->symbol = $internal->symbol;
         $wallet->percent = $internal->percent;
+
         return array('status' => true, 'msg' => '', 'wallet' => $wallet);
     }
 
     function transactioneInternalWallet(Request $request){
-        $wallet = WalletsInternal::find($request->id_wallet);
-        $internal = Internalcurrency::find($wallet->id_internal);
+        $walletData = $this->walletsService->getWalletFiat($request->id_user, true);
+        $wallet = $walletData->wallet;
+        $internal = $walletData->internal;
 
         DB::beginTransaction();
         try {
@@ -271,31 +282,27 @@ class WalletsController extends UsersController
             $transaction->description = $request->description;
             $transaction->id_admin = \Auth::user()->id;
 
-            $balance = Crypt::decryptString($wallet->value);
-            $balance_available = Crypt::decryptString($wallet->value_available);
             if($request->type == 'deposit'){
-                $wallet->value = Crypt::encryptString($balance + $request->amount);
-                $wallet->value_available = Crypt::encryptString($balance_available + $request->amount);
-                $wallet->value_num = $balance + $request->amount;
-                $wallet->value_available_num = $balance_available + $request->amount;
-            }else{
-                $wallet->value = Crypt::encryptString($balance - $request->amount);
-                $wallet->value_available = Crypt::encryptString($balance_available - $request->amount);
-                $wallet->value_num = $balance - $request->amount;
-                $wallet->value_available_num = $balance_available - $request->amount;
+                $success = $wallet->deposit($request->amount);
+            } else {
+                $success = $wallet->withdraw($request->amount);
             }
-            $wallet->save();
 
-            $transaction->stock = $wallet->value_num;
+            if (!$success) {
+                throw new \Exception('خطا در انجام عملیات کیف پول تومانی');
+            }
+
+            $transaction->stock = (float) $wallet->balance;
             $transaction->save();
             DB::commit();
 
-            self::logSave('users.changeBalanceWallet',$request->all(), 'تغییر موجودی تومان کاربر #'.$wallet->id_user,$request->ip());
+            self::logSave('users.changeBalanceWallet', $request->all(), 'تغییر موجودی تومان کاربر #'.$wallet->id_user, $request->ip());
             return array('status' => true, 'msg' => 'تراکنش با موفیقت ثبت شد.');
 
         } catch (\Exception $e) {
             DB::rollback();
-            return array('status' => false, 'msg' => $e->getMessage().':'.$e->getLine());
+            \Log::error('Transaction internal wallet failed: ' . $e->getMessage());
+            return array('status' => false, 'msg' => $e->getMessage());
         }
     }
 }

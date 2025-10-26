@@ -8,11 +8,10 @@ use App\Models\AdminUser;
 use App\Models\PaymentGateway\Zibal;
 use App\Models\User;
 use App\Models\Internalcurrency;
-use App\Models\WalletsInternal;
-use App\Models\PaymentGateway\PaymentGateway;
 use App\Models\TransactionInternal;
 use App\Models\UserCardBank;
 use App\Models\Cryptocurrency;
+use App\Services\Wallets\WalletsService;
 use Illuminate\Http\Request;
 use Morilog\Jalali;
 use DB;
@@ -20,6 +19,12 @@ use Crypt;
 
 class InternalController extends Controller
 {
+    private WalletsService $walletsService;
+    public function __construct(WalletsService $walletsService)
+    {
+        $this->walletsService = $walletsService;
+    }
+
     function listInternal(Request $request)
     {
         $limit = isset($request->perPage) && $request->perPage <= 100 ? $request->perPage : 10;
@@ -207,20 +212,14 @@ class InternalController extends Controller
             $TraInternal->id_admin = \Auth::user()->id;
             $TraInternal->save();
 
-            $internal = Internalcurrency::find($TraInternal->id_internalcurrency);
-            $wallet = WalletsInternal::where('id_internal',$internal->id)->where('id_user',$user->id)->first();
-            if(!isset($wallet))
-                $wallet = $this->createWalletInternal($internal->id,$user->id);
-            $balance = round( Crypt::decryptString($wallet->value),$internal->percent);
-            $balance_available = round( Crypt::decryptString($wallet->value_available),$internal->percent);
+            $walletData = $this->walletsService->getWalletFiat($user->id, true);
+            $wallet = $walletData->wallet;
 
-            $balance += $TraInternal->amount;
-            $balance_available += $TraInternal->amount;
-            $wallet->value = Crypt::encryptString(round($balance,$internal->percent));
-            $wallet->value_available = Crypt::encryptString(round($balance_available,$internal->percent));
-            $wallet->value_num = $balance;
-            $wallet->value_available_num = $balance_available;
-            $wallet->save();
+            $success = $wallet->deposit($TraInternal->amount);
+
+            if (!$success) {
+                throw new \Exception('خطا در واریز به کیف پول تومانی');
+            }
             DB::commit();
             // send Notif
             $this->sendNotification($user->id,'confirmInternalReceipt',
@@ -366,26 +365,12 @@ class InternalController extends Controller
                 return array('status'=>true ,'msg'=>'تراکنش ثبت فیش با موفقیت رد شد.');
             }else{
                 //return amount
-                $internal = Internalcurrency::find($TraInternal->id_internalcurrency);
-                $wallet = WalletsInternal::where('id_internal',$internal->id)->where('id_user',$user->id)->first();
-                if(!isset($wallet)){
-                    $wallet = new WalletsInternal();
-                    $wallet->id_user = $user->id;
-                    $wallet->id_internal = 1;
-                    $wallet->value = Crypt::encryptString(0);
-                    $wallet->value_available = Crypt::encryptString(0);
-                    $wallet->save();
+                $walletData = $this->walletsService->getWalletFiat($user->id, true);
+                $wallet = $walletData->wallet;
+                $success = $wallet->deposit($TraInternal->amount);
+                if (!$success) {
+                    throw new \Exception('خطا در واریز مبلغ به کیف پول تومانی');
                 }
-                $balance = round( Crypt::decryptString($wallet->value),$internal->percent);
-                $balance_available = round( Crypt::decryptString($wallet->value_available),$internal->percent);
-
-                $balance += $TraInternal->amount;
-                $balance_available += $TraInternal->amount;
-                $wallet->value = Crypt::encryptString(round($balance,$internal->percent));
-                $wallet->value_available = Crypt::encryptString(round($balance_available,$internal->percent));
-                $wallet->value_num = round($balance,$internal->percent);
-                $wallet->value_available_num = round($balance_available,$internal->percent);
-                $wallet->save();
                 DB::commit();
 
                 // send Notif
@@ -419,18 +404,14 @@ class InternalController extends Controller
                 $TraInternal->data = json_encode($data);
                 $TraInternal->save();
 
-                $internal = \App\Models\Internalcurrency::find($user->id_internal);
-                $wallet = \App\Models\WalletsInternal::where('id_internal',$internal->id)->where('id_user',$user->id)->first();
-                $balance = round( \Illuminate\Support\Facades\Crypt::decryptString($wallet->value),$internal->percent);
-                $balance_available = round(Crypt::decryptString($wallet->value_available),$internal->percent);
+                $walletData = $this->walletsService->getWalletFiat($user->id, true);
+                $wallet = $walletData->wallet;
 
-                $balance += $TraInternal->amount;
-                $balance_available += $TraInternal->amount;
-                $wallet->value = Crypt::encryptString(round($balance,$internal->percent));
-                $wallet->value_available = Crypt::encryptString(round($balance_available,$internal->percent));
-                $wallet->value_num = round($balance,$internal->percent);
-                $wallet->value_available_num = round($balance_available,$internal->percent);
-                $wallet->save();
+                $success = $wallet->deposit($TraInternal->amount);
+
+                if (!$success) {
+                    throw new \Exception('خطا در واریز مبلغ به کیف پول تومانی');
+                }
                 DB::commit();
 
                 $result = array('status' => true, 'msg' =>'تراکنش با موفقیت وریفای شد و به کیف پول کاربر اضافه شد.');

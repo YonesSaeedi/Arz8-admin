@@ -7,6 +7,7 @@ use App\Models\Orders;
 use App\Models\User;
 use App\Models\UserLogin;
 use App\Models\UserReferral;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Morilog\Jalali;
@@ -37,8 +38,13 @@ class UsersController extends Controller
         // Filters
         $users = self::filters($users,$request);
         $usersCount = $users->count();
-        $users->leftJoin('users_wallets_internal','users_wallets_internal.id_user','users.id')->groupBy('users.id');
-        $users->select('users.id','users.email','users.name','users.family','users.mobile','users.level','name_display','identification_img','access','auth_img','address','users_wallets_internal.value_num as balanceInternal');
+        $users->leftJoin('users_wallets', function($join) {
+            $join->on('users_wallets.id_user', '=', 'users.id')
+                ->where('users_wallets.type', Wallet::TYPE_CURRENCY)
+                ->where('users_wallets.currency_code', Wallet::CURRENCY_TOMAN);
+        })->groupBy('users.id');
+
+        $users->select('users.id','users.email','users.name','users.family','users.mobile','users.level','name_display','access','address','users_wallets.balance as balanceInternal');
 
         switch ($request->sortFilter){
             case 'amountOrders':
@@ -169,9 +175,9 @@ class UsersController extends Controller
         }
 
         if (isset($request->balanceStart))
-            $users->where('users_wallets_internal.value_num','>=', $request->balanceStart);
+            $users->where('users_wallets.balance','>=', $request->balanceStart);
         if (isset($request->balanceStop))
-            $users->where('users_wallets_internal.value_num','<=', $request->balanceStop);
+            $users->where('users_wallets.balance','<=', $request->balanceStop);
 
         switch ($request->otherFilter){
             case 'emailVerified':

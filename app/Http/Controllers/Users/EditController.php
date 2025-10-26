@@ -6,13 +6,16 @@ use App\Models\Cryptocurrency;
 use App\Models\Settings;
 use App\Models\User;
 use App\Models\UserReferral;
-use App\Models\WalletsCrypto;
-use App\Models\WalletsInternal;
-use App\Models\Internalcurrency;
+use App\Services\Wallets\WalletsService;
 use Illuminate\Http\Request;
 
 class EditController extends UsersController
 {
+    private WalletsService $walletsService;
+    public function __construct(WalletsService $walletsService)
+    {
+        $this->walletsService = $walletsService;
+    }
 
     function getUserInfo(Request $request){
         $user = User::find($request->id);
@@ -62,17 +65,16 @@ class EditController extends UsersController
         $data->levels = json_decode(\Crypt::decryptString(Settings::where('name','levels')->first()->value));
         $data->levels_account = json_decode(\Crypt::decryptString(Settings::where('name','levels_account')->first()->value));
 
-        $internal = Internalcurrency::find($user->id_internal);
-        $walletsInternal = WalletsInternal::where('id_internal',$internal->id)->where('id_user',$user->id)->first();
-        if(isset($walletsInternal)){
-            $balance = round( \Crypt::decryptString($walletsInternal->value),$internal->percent);
-            $balance_available = round( \Crypt::decryptString($walletsInternal->value_available),$internal->percent);
-        }
+        $walletData = $this->walletsService->getWalletFiat($user->id);
+        $balance = (float) $walletData->balance;
+        $balance_available = (float) $walletData->balance_available;
         $data->internal_balance = array('balance'=>$balance??0, 'balance_available'=>$balance_available??0);
 
-        $walletsCrypto = WalletsCrypto::where('id_user',$user->id)->get();
+        $cryptoWallets = \App\Models\Wallet::where('id_user', $user->id)
+            ->where('type', \App\Models\Wallet::TYPE_ASSET)
+            ->get();
         $sum_usdt = 0;
-        foreach ($walletsCrypto as $wallet){
+        foreach ($cryptoWallets as $wallet){
             $crypto = Cryptocurrency::find($wallet->id_crypto);
             $data_crypto = json_decode($crypto->data??'{}');
             $price = $data_crypto->price_usdt??1;

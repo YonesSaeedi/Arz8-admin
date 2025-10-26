@@ -7,8 +7,7 @@ use App\Http\Controllers\Exchange\BinanceApi;
 use App\Models\Cryptocurrency;
 use App\Models\TransactionCrypto;
 use App\Models\User;
-use App\Models\WalletsCrypto;
-use Crypt;
+use App\Services\Wallets\WalletsService;
 use DB;
 use Illuminate\Console\Command;
 
@@ -28,14 +27,17 @@ class ConfirmDepositCrypto extends Command
      */
     protected $description = 'confirm deposit crypto after 30 min';
 
+    private WalletsService $walletsService;
+
     /**
      * Create a new command instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(WalletsService $walletsService)
     {
         parent::__construct();
+        $this->walletsService = $walletsService;
     }
 
     /**
@@ -49,7 +51,7 @@ class ConfirmDepositCrypto extends Command
         $controller = new Controller();
 
         $Transactions = TransactionCrypto::where('created_at','<',date('Y-m-d H:i:s',strtotime('- 30 minute')))
-                            ->where(['status'=>'pending','type'=>'deposit'])->whereNotNull('txid')->whereNull('payment')->get();
+            ->where(['status'=>'pending','type'=>'deposit'])->whereNotNull('txid')->whereNull('payment')->get();
         foreach ($Transactions as $transaction){
             $user = User::find($transaction->id_user);
             $crypto = Cryptocurrency::find($transaction->id_crypto);
@@ -68,23 +70,12 @@ class ConfirmDepositCrypto extends Command
                         $transaction->payment = $transaction->amount;
                         $transaction->save();
 
-                        //get Balance
-                        $wallet = WalletsCrypto::where('id_crypto',$crypto->id)->where('id_user',$transaction->id_user)->first();
-                        if(!$wallet)
-                            $wallet = $controller->createWallet($crypto->id,$transaction->id_user);
-                        $balance = Crypt::decryptString($wallet->value);
-                        $balance_available = Crypt::decryptString($wallet->value_available);
-                        $balance = $controller->cutFloatNumber($balance,$crypto->percent);
-                        $balance_available = $controller->cutFloatNumber($balance_available,$crypto->percent);
+                        // واریز به کیف پول رمزارز
+                        $success = $this->walletsService->depositToCryptoWallet($transaction->id_user, $crypto->id, $transaction->amount);
 
-                        $wallet = WalletsCrypto::where('id_crypto',$crypto->id)->where('id_user', $transaction->id_user)->first();
-                        $b = $controller->cutFloatNumber($balance + $transaction->amount,$crypto->percent);
-                        $ba = $controller->cutFloatNumber($balance_available + $transaction->amount,$crypto->percent);
-                        $wallet->value = Crypt::encryptString($b);
-                        $wallet->value_available = Crypt::encryptString($ba);
-                        $wallet->value_num = $b;
-                        $wallet->value_available_num = $ba;
-                        $wallet->save();
+                        if (!$success) {
+                            throw new \Exception('خطا در واریز به کیف پول رمزارز');
+                        }
                         DB::commit();
 
                         // send Notif
@@ -93,10 +84,10 @@ class ConfirmDepositCrypto extends Command
 
                     } catch (\Exception $e) {
                         DB::rollback();
+                        \Log::error('Confirm deposit crypto failed: ' . $e->getMessage());
                     }
                 }
             }
         }
     }
-
 }

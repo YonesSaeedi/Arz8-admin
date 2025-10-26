@@ -1,15 +1,10 @@
 <?php
 namespace App\Http\Controllers\Transaction;
 
-use App\Models\AdminHesab;
 use App\Models\AutomaticDeposit;
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
-use App\Models\User;
-use App\Models\Internalcurrency;
-use App\Models\WalletsInternal;
 use App\Models\PaymentGateway\PaymentGateway;
-use App\Models\TransactionInternal;
 use App\Models\UserCardBank;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;

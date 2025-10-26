@@ -13,8 +13,7 @@ use App\Models\TransactionInternal;
 use App\Models\User;
 use App\Models\UserCardBank;
 use App\Models\UserReferral;
-use App\Models\WalletsCrypto;
-use App\Models\WalletsInternal;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Morilog\Jalali;
 use DB;
@@ -32,9 +31,15 @@ class UsersController extends Controller
         $users = self::filters($users,$request);
         $usersCount = $users->count();
 
-        $users->leftJoin('users_wallets_internal','users_wallets_internal.id_user','users.id')->groupBy('users.id');
-        $users->select('users.id','name_display','email','name','family','mobile','level','level_account','identification_img','access','auth_img','address','users.created_at',
-                        'users_wallets_internal.value_num as balanceInternal');
+        // جایگزینی users_wallets_internal با users_wallets
+        $users->leftJoin('users_wallets', function($join) {
+            $join->on('users_wallets.id_user', '=', 'users.id')
+                ->where('users_wallets.type', Wallet::TYPE_CURRENCY)
+                ->where('users_wallets.currency_code', Wallet::CURRENCY_TOMAN);
+        })->groupBy('users.id');
+
+        $users->select('users.id','name_display','email','name','family','mobile','level','level_account','access','address','users.created_at',
+            'users_wallets.balance as balanceInternal');
         $users = $users->paginate($limit)->items();
 
         foreach ($users as $user) {
@@ -88,9 +93,9 @@ class UsersController extends Controller
                 $users->where('access', $request->status);
         }
         if (isset($request->balanceStart))
-            $users->where('users_wallets_internal.value_num','>=', $request->balanceStart);
+            $users->where('users_wallets.balance','>=', $request->balanceStart);
         if (isset($request->balanceStop))
-            $users->where('users_wallets_internal.value_num','<=', $request->balanceStop);
+            $users->where('users_wallets.balance','<=', $request->balanceStop);
 
         switch ($request->otherFilter){
             case 'emailVerified':
@@ -189,19 +194,18 @@ class UsersController extends Controller
         $statistic->email_users = User::whereNotNull('email_verified_at')->count();
 
         // یکتا کردن دو لیست فقط با یک کوئری پیچیده‌تر ولی سریع‌تر:
-        $statistic->balance_users = DB::table(function ($query) {
-            $query->select('id_user')
-                ->from('users_wallets_crypto')
-                ->where('value_num', '>', 0)
-                ->union(
-                    DB::table('users_wallets_internal')
-                        ->select('id_user')
-                        ->where('value_num', '>', 0)
-                );
-        }, 'sub')->distinct()->count('id_user');
+        $statistic->balance_users = DB::table('users_wallets')
+            ->where(function($query) {
+                $query->where('balance', '>', 0)
+                    ->orWhere('blocked_balance', '>', 0);
+            })
+            ->distinct()
+            ->count('id_user');
 
         // مجموع موجودی داخلی
-        $statistic->balance_all_amount = WalletsInternal::where('value_num', '>', 0)->sum('value_num');
+        $statistic->balance_all_amount = Wallet::where('type', Wallet::TYPE_CURRENCY)
+            ->where('balance', '>', 0)
+            ->sum('balance');
 
         // کاربران فعال در سفارش یا معامله
         $statistic->active_users = DB::table(function ($query) {
@@ -286,8 +290,7 @@ class UsersController extends Controller
                     TicketMessage::where('id_ticket',$ticket->id)->delete();
                 }
                 Ticket::where('id_user',$user->id)->delete();
-                WalletsCrypto::where('id_user',$user->id)->delete();
-                WalletsInternal::where('id_user',$user->id)->delete();
+                Wallet::where('id_user',$user->id)->delete();
                 TransactionCrypto::where('id_user',$user->id)->delete();
                 TransactionInternal::where('id_user',$user->id)->delete();
                 Orders::where('id_user',$user->id)->delete();
