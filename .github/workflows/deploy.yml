@@ -36,7 +36,7 @@ jobs:
             /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader &&
             /usr/local/php82/bin/php82 artisan cache:clear &&
             /usr/local/php82/bin/php82 artisan config:clear &&
-            /usr/local/php82/bin/php82 artisan route:clear &&
+            /usr/local/php82/bin/php82 artisan route:clear
           "
 
   build_frontend:
