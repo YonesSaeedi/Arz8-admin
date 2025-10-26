@@ -38,7 +38,6 @@ jobs:
             chown -R cp38729:cp38729 ${TARGET_DIR}
           "
 
-
   build_frontend:
     name: Build & Deploy Vue 2
     runs-on: ubuntu-latest
