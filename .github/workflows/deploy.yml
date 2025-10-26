@@ -23,7 +23,9 @@ jobs:
       - name: Deploy Laravel
         run: |
           if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
-             TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
+            TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
+          elif [ "${GITHUB_REF}" == "refs/heads/dev" ]; then
+            TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin-dev"
           fi
 
           ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
