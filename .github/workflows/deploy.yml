@@ -22,22 +22,43 @@ jobs:
 
       - name: Deploy Laravel
         run: |
+          # تعیین مسیر بر اساس برنچ
           if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
-             TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
+            TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
           elif [ "${GITHUB_REF}" == "refs/heads/dev" ]; then
-             TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin-dev"
+            TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin-dev"
+          else
+            echo "❌ Branch not supported: ${GITHUB_REF}"
+            exit 1
           fi
 
-          ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
-            cd ${TARGET_DIR} &&
-            git reset --hard HEAD &&
-            git clean -fd &&
-            git pull origin ${GITHUB_REF##*/} --no-rebase &&
-            /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader &&
-            /usr/local/php82/bin/php82 artisan optimize:clear &&
-            chown -R cp38729:cp38729 ${TARGET_DIR}
-          "
+          echo "🎯 Deploying to: $TARGET_DIR"
+          echo "🌿 Branch: ${GITHUB_REF##*/}"
 
+          ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
+            set -e  # در صورت خطا متوقف شود
+
+            echo '📂 Changing to target directory...'
+            cd '$TARGET_DIR' || { echo '❌ Directory not found'; exit 1; }
+
+            echo '🔄 Resetting and cleaning...'
+            git reset --hard HEAD
+            git clean -fd
+
+            echo '📥 Pulling latest changes...'
+            git pull origin '${GITHUB_REF##*/}' --no-rebase
+
+            echo '📦 Installing dependencies...'
+            /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
+
+            echo '🧹 Clearing cache...'
+            /usr/local/php82/bin/php82 artisan optimize:clear
+
+            echo '🔧 Setting permissions...'
+            chown -R cp38729:cp38729 '$TARGET_DIR'
+
+            echo '✅ Deployment completed successfully!'
+          "
 
   build_frontend:
     name: Build & Deploy Vue 2
