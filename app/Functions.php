@@ -28,7 +28,6 @@ class Functions extends Http\Controllers\Controller
             });
         }
 
-
         $storagePath = self::storagePath();
         $directory = $storagePath.$path ;
         $file_path = $directory . '/'. $name;
