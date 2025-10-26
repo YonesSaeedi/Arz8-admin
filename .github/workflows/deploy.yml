@@ -23,43 +23,19 @@ jobs:
       - name: Deploy Laravel
         run: |
           if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
-            TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
-          elif [ "${GITHUB_REF}" == "refs/heads/dev" ]; then
-            TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin-dev"
-          else
-            echo "❌ Branch not supported: ${GITHUB_REF}"
-            exit 1
+             TARGET_DIR="/home/cp38729/domains/arz8x.com/saeedi-admin"
           fi
 
-          echo "🎯 Deploying to: $TARGET_DIR"
-          echo "🌿 Branch: ${GITHUB_REF##*/}"
-
-          # Forward SSH agent to server
-          ssh -A -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
-            set -e
-
-            echo '📂 Changing to target directory...'
-            cd '$TARGET_DIR'
-
-            echo '🔄 Resetting and cleaning...'
-            git reset --hard HEAD
-            git clean -fd
-
-            echo '📥 Pulling latest changes...'
-            # استفاده از SSH agent forwarded
-            git pull origin '${GITHUB_REF##*/}' --no-rebase
-
-            echo '📦 Installing dependencies...'
-            /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader
-
-            echo '🧹 Clearing cache...'
-            /usr/local/php82/bin/php82 artisan optimize:clear
-
-            echo '🔧 Setting permissions...'
-            chown -R cp38729:cp38729 '$TARGET_DIR'
-
-            echo '✅ Deployment completed successfully!'
+          ssh -o StrictHostKeyChecking=no -p 3031 cp38729@65.21.239.21 "
+            cd ${TARGET_DIR} &&
+            git reset --hard HEAD &&
+            git clean -fd &&
+            git pull origin ${GITHUB_REF##*/} --no-rebase &&
+            /usr/local/php82/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader &&
+            /usr/local/php82/bin/php82 artisan optimize:clear &&
+            chown -R cp38729:cp38729 ${TARGET_DIR}
           "
+
 
   build_frontend:
     name: Build & Deploy Vue 2
@@ -107,6 +83,7 @@ jobs:
           rm -rf /home/cp38729/domains/arz8x.com/saeedi-admin/frontend/*
 
           chown -R cp38729:cp38729 /home/cp38729/domains/arz8x.com/admin
+
           "
       - name: Upload built assets
         uses: appleboy/scp-action@v0.1.4
