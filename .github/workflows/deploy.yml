@@ -37,7 +37,6 @@ jobs:
             /usr/local/php82/bin/php82 artisan cache:clear &&
             /usr/local/php82/bin/php82 artisan config:clear &&
             /usr/local/php82/bin/php82 artisan route:clear &&
-            chown -R cp38729:cp38729 ${TARGET_DIR}
           "
 
   build_frontend:
