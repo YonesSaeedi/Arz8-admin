@@ -85,7 +85,6 @@ jobs:
           rm -rf /home/cp38729/domains/arz8x.com/saeedi-admin/frontend/*
 
           chown -R cp38729:cp38729 /home/cp38729/domains/arz8x.com/admin
-
           "
       - name: Upload built assets
         uses: appleboy/scp-action@v0.1.4
