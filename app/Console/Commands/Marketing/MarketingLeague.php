@@ -121,7 +121,7 @@ class MarketingLeague extends Command
         // پرداخت جوایز
         foreach ($top3 as $key => $entry) {
             if (!isset($reward[$key])) break;
-            $userId = 638;//$entry->id_user;
+            $userId = $entry->id_user;
             $this->transactionCryptoWallet($userId, (object)$reward[$key], $titles[$key]);
         }
 
