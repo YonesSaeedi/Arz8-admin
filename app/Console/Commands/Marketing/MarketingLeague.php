@@ -135,6 +135,8 @@ class MarketingLeague extends Command
         $MarketingLeague->id_user_5 = $top3[4]->id_user ?? null;
         $MarketingLeague->data = json_encode(['1 میلیون شیبا', '500 هزار شیبا', '300 هزار شیبا', '100 هزار شیبا', '100 هزار شیبا']);
         $MarketingLeague->save();
+
+        $this->nofitcation($MarketingLeague);
     }
 
 
@@ -200,6 +202,33 @@ class MarketingLeague extends Command
             \Log::channel('ErrorApi')->info("RegisterLevel2: tr error". $e->getMessage().':'.$e->getLine());
             return false;
         }
+    }
+
+
+    function nofitcation($MarketingLeague)
+    {
+        // دریافت اطلاعات کاربران از دیتابیس
+        $user1 = $MarketingLeague->id_user_1 ? \App\Models\User::find($MarketingLeague->id_user_1) : null;
+        $user2 = $MarketingLeague->id_user_2 ? \App\Models\User::find($MarketingLeague->id_user_2) : null;
+        $user3 = $MarketingLeague->id_user_3 ? \App\Models\User::find($MarketingLeague->id_user_3) : null;
+        $user4 = $MarketingLeague->id_user_4 ? \App\Models\User::find($MarketingLeague->id_user_4) : null;
+        $user5 = $MarketingLeague->id_user_5 ? \App\Models\User::find($MarketingLeague->id_user_5) : null;
+
+        // ایجاد متن پیام
+        $msg = "🏆 برندگان مسابقه روز گذشته مشخص شدن!\n";
+        $msg .= "۲,۰۰۰,۰۰۰ شیبا بین ۵ نفر تقسیم شد 🎁\n\n";
+
+        $msg .= "🥇 " . ($user1 ? $user1->name.' '.$user1->family : 'نامشخص') . "\n";
+        $msg .= "🥈 " . ($user2 ? $user2->name.' '.$user2->family : 'نامشخص') . "\n";
+        $msg .= "🥉 " . ($user3 ? $user3->name.' '.$user3->family : 'نامشخص') . "\n";
+        $msg .= "🎖 " . ($user4 ? $user4->name.' '.$user4->family : 'نامشخص') . "\n";
+        $msg .= "🎖 " . ($user5 ? $user5->name .' '.$user5->family: 'نامشخص') . "\n\n";
+
+        $msg .= "جوایز واریز شد ✅\n";
+        $msg .= "مسابقه امروز فعال است، از الان شروع کن 💎";
+
+        $func = new \App\Functions();
+        $func->sendMsgFirebase(env('APP_NAME'), $msg);
     }
 
 }
