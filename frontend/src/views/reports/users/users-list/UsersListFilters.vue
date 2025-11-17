@@ -104,6 +104,8 @@
 <script>
     import VuePersianDatetimePicker from 'vue-persian-datetime-picker'
     import jalaliMmoment from "jalali-moment";
+    const NowDate = jalaliMmoment()
+    var day = NowDate.subtract(0, 'jDay');
 
     import BCardActions from '@core/components/b-card-actions/BCardActions.vue'
     import {
@@ -114,7 +116,7 @@
     export default {
         data () {
             return {
-                dateStart:'',
+                dateStart:day.format('jYYYY/jMM/jDD 00:00'),
                 dateStop:'',
                 showDatePickerStart: false,
                 showDatePickerStop: false,

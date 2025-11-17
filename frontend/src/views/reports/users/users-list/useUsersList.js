@@ -1,12 +1,16 @@
 import {ref, watch, computed} from '@vue/composition-api'
 import axios from '../../../../libs/axios'
 import {title} from '@core/utils/filter'
+import jalaliMmoment from "jalali-moment";
 
 // Notification
 import {useToast} from 'vue-toastification/composition'
 import ToastificationContent from '@core/components/toastification/ToastificationContent.vue'
 
 export default function useUsersList(props) {
+    const NowDate = jalaliMmoment()
+    var day = NowDate.subtract(0, 'jDay');
+
     // Use toast
     const toast = useToast()
 
@@ -33,7 +37,7 @@ export default function useUsersList(props) {
     const isSortDirDesc = ref(true)
     const levelFilter = ref(null)
     const statusFilter = ref(null)
-    const dateStartFilter = ref(null)
+    const dateStartFilter =  ref(day.format('jYYYY/jMM/jDD 00:00'))
     const dateStopFilter = ref(null)
     const balanceStartFilter = ref(null)
     const balanceStopFilter = ref(null)

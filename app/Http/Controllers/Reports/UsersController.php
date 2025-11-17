@@ -14,218 +14,294 @@ use App\Http\Controllers\Users\UsersController as UserContrl;
 
 class UsersController extends Controller
 {
-    function listUsers(Request $request)
+    public function listUsers(Request $request)
     {
-        if (isset($request->registeryDateStart)) {
-            try{
+        // parse dates
+        $registeryDateStart = null; $registeryDateStop = null;
+        if ($request->registeryDateStart) {
+            try {
                 $registeryDateStart = Jalali\CalendarUtils::createCarbonFromFormat('Y/m/d H:i', $request->registeryDateStart);
-            }catch(\Exception $e){}
+            } catch (\Exception $e) {}
         }
-        if (isset($request->registeryDateStop)) {
-            try{
+        if ($request->registeryDateStop) {
+            try {
                 $registeryDateStop = Jalali\CalendarUtils::createCarbonFromFormat('Y/m/d H:i', $request->registeryDateStop);
-            }catch(\Exception $e){}
+            } catch (\Exception $e) {}
         }
 
+        $limit = ($request->perPage && $request->perPage <= 100) ? (int)$request->perPage : 10;
+        $page = max(1, (int)($request->page ?? 1));
+
+        $usersQuery = User::query();
+
+        // apply base filters (search, status, etc.)
+        $usersQuery = $this->filters($usersQuery, $request);
+
+        // apply joins / aggregates depending on sortFilter and date range
+        $usersQuery = $this->applySortFilter($usersQuery, $request, $registeryDateStart, $registeryDateStop);
+
+        // === CORRECT TOTAL: count distinct users.id ===
+        // clone query to avoid modifying original
+        $countQuery = clone $usersQuery;
+
+        // remove any select/groupBy that interfere and compute distinct count
+        // use toBase() so Laravel returns a Query\Builder (not Eloquent) and value() works
+        $total = (int) $countQuery->getQuery()
+            ->clone() // ensure clone of underlying query (some Laravel versions)
+            ->selectRaw('count(distinct users.id) as aggregate')
+            ->getConnection()
+            ->table(DB::raw("({$countQuery->toSql()}) as sub"))
+            ->mergeBindings($countQuery->getQuery()) // bring bindings
+            ->selectRaw('count(distinct id) as aggregate')
+            ->value('aggregate');
+
+        // Simpler and more portable alternative (if DB::raw subquery approach causes issues):
+        // $total = (int) $countQuery->toBase()->selectRaw('count(distinct users.id) as aggregate')->value('aggregate');
+
+        // === PAGINATION (manual, avoid paginate() internal count) ===
+        $offset = ($page - 1) * $limit;
+
+        // When there is a groupBy in the query, ->get() returns grouped rows; use get() after applying limit/offset
+        $rows = $usersQuery->skip($offset)->take($limit)->get();
+
+        // post-process each user (avatar, access, lastOrder, amount)
         $userController = new UserContrl();
-
-        $limit = isset($request->perPage) && $request->perPage <= 100 ? $request->perPage : 10;
-
-        $result = (object)array();
-        $users = User::query();
-
-        // Filters
-        $users = self::filters($users,$request);
-        $usersCount = $users->count();
-        $users->leftJoin('users_wallets_internal','users_wallets_internal.id_user','users.id')->groupBy('users.id');
-        $users->select('users.id','users.email','users.name','users.family','users.mobile','users.level','name_display','identification_img','access','auth_img','address','users_wallets_internal.value_num as balanceInternal');
-
-        switch ($request->sortFilter){
-            case 'amountOrders':
-                $users->leftJoin('orders','orders.id_user','users.id')->groupBy('users.id');
-                $users->where('orders.status','success');
-                $users->selectRaw('round(sum(amount)) as amount');
-                break;
-            case 'amountOrdersBuy':
-                $users->leftJoin('orders','orders.id_user','users.id')->groupBy('users.id');
-                $users->where('orders.status','success')->where('orders.type','buy');
-                $users->selectRaw('round(sum(amount)) as amount');
-                break;
-            case 'amountOrdersSell':
-                $users->leftJoin('orders','orders.id_user','users.id')->groupBy('users.id');
-                $users->where('orders.status','success')->where('orders.type','sell');
-                $users->selectRaw('round(sum(amount)) as amount');
-                break;
-            case 'countOrders':
-                $users->leftJoin('orders','orders.id_user','users.id')->groupBy('users.id');
-                $users->where('orders.status','success');
-                $users->selectRaw('count(orders.id) as amount');
-                break;
-            case 'countTrades':
-                $users->leftJoin('trades','trades.id_user','users.id')->groupBy('users.id');
-                $users->where('trades.status','success');
-                $users->selectRaw('count(trades.id) as amount');
-                break;
-            case 'countReferral':
-                $users->leftJoin('users_referral','users_referral.id_user_caller','users.id')->groupBy('users.id');
-                $users->selectRaw('count(users_referral.id) as amount');
-                break;
-            case 'countReferralTr':
-                $users->leftJoin('users_referral_transaction','users_referral_transaction.id_user','users.id')->groupBy('users.id');
-                $users->selectRaw('count(users_referral_transaction.id) as amount');
-                break;
-            case 'countReferralTrAmount':
-                $users->leftJoin('users_referral_transaction','users_referral_transaction.id_user','users.id')->groupBy('users.id');
-                $users->selectRaw('round(sum(amount)) as amount');
-                break;
-            case 'countWheel':
-                $users->leftJoin('gift_wheel','gift_wheel.id_user','users.id')->groupBy('users.id');
-                $users->selectRaw('count(gift_wheel.id) as amount');
-                break;
-            case 'countWheelAmount':
-                $users->leftJoin('gift_wheel','gift_wheel.id_user','users.id')->groupBy('users.id');
-                $users->selectRaw('round(sum(amount)) as amount');
-                break;
-            default:
-                break;
-        }
-
-        if(strpos($request->sortFilter,"Orders") !== false){
-            if (isset($registeryDateStart))
-                $users->where('orders.created_at','>=',$registeryDateStart);
-            if (isset($registeryDateStop))
-                $users->where('orders.created_at','<=',$registeryDateStop);
-
-        }else if(strpos($request->sortFilter,"Trades") !== false){
-            if (isset($registeryDateStart))
-                $users->where('trades.created_at','>=',$registeryDateStart);
-            if (isset($registeryDateStop))
-                $users->where('trades.created_at','<=',$registeryDateStop);
-
-        }else if(strpos($request->sortFilter,"ReferralTr") !== false){
-            if (isset($registeryDateStart))
-                $users->where('users_referral_transaction.created_at','>=',$registeryDateStart);
-            if (isset($registeryDateStop))
-                $users->where('users_referral_transaction.created_at','<=',$registeryDateStop);
-
-        }else if(strpos($request->sortFilter,"Referral") !== false){
-            if (isset($registeryDateStart))
-                $users->where('users_referral.created_at','>=',$registeryDateStart);
-            if (isset($registeryDateStop))
-                $users->where('users_referral.created_at','<=',$registeryDateStop);
-        }
-
-
-        $users = $users->paginate($limit)->items();
-        foreach ($users as $user) {
+        foreach ($rows as $user) {
             $info = json_decode($user->info ?? '{}');
             $user->avatar = $info->account_profile_img ?? null;
             $user->access = $userController->accessStatus($user);
-            $order = Orders::where('id_user',$user->id)->orderBy('created_at','desc')->first();
-            if(isset($order))
-                $user->lastOrder = $this->convertDate($order->created_at, 'd F Y H:i');
-            else
-                $user->lastOrder = null;
 
-            $user->amount = (int)$user->amount;
+            $order = Orders::where('id_user', $user->id)->orderBy('created_at', 'desc')->first();
+            $user->lastOrder = $order ? $this->convertDate($order->created_at, 'd F Y H:i') : null;
+            $user->amount = (int) ($user->amount ?? 0);
         }
-        $result->users = $users;
-        $result->total = $usersCount;
-        return response()->json($result);
+
+        return response()->json([
+            'users' => $rows,
+            'total' => $total,
+            'perPage' => $limit,
+            'page' => $page,
+        ]);
     }
-    function filters($users,$request){
+
+
+    private function applySortFilter($q, $request, $start, $stop)
+    {
+        // join مشترک
+        $q->leftJoin('users_wallets_internal', 'users_wallets_internal.id_user', 'users.id');
+
+        // اطلاعات پایه
+        $q->select(
+            'users.id','users.email','users.name','users.family',
+            'users.mobile','users.level','name_display','identification_img',
+            'access','auth_img','address',
+            'users_wallets_internal.value_num as balanceInternal'
+        );
+
+        // فیلترهای مختلف
+        switch ($request->sortFilter) {
+
+            case 'amountOrders':
+                $q->leftJoin('orders','orders.id_user','users.id')
+                    ->where('orders.status','success')
+                    ->selectRaw('round(sum(amount)) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'amountOrdersBuy':
+                $q->leftJoin('orders','orders.id_user','users.id')
+                    ->where('orders.status','success')
+                    ->where('orders.type','buy')
+                    ->selectRaw('round(sum(amount)) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'amountOrdersSell':
+                $q->leftJoin('orders','orders.id_user','users.id')
+                    ->where('orders.status','success')
+                    ->where('orders.type','sell')
+                    ->selectRaw('round(sum(amount)) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'countOrders':
+                $q->leftJoin('orders','orders.id_user','users.id')
+                    ->where('orders.status','success')
+                    ->selectRaw('count(orders.id) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'countTrades':
+                $q->leftJoin('trades','trades.id_user','users.id')
+                    ->where('trades.status','success')
+                    ->selectRaw('count(trades.id) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'countReferral':
+                $q->leftJoin('users_referral','users_referral.id_user_caller','users.id')
+                    ->selectRaw('count(users_referral.id) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'countReferralTr':
+                $q->leftJoin('users_referral_transaction','users_referral_transaction.id_user','users.id')
+                    ->selectRaw('count(users_referral_transaction.id) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'countReferralTrAmount':
+                $q->leftJoin('users_referral_transaction','users_referral_transaction.id_user','users.id')
+                    ->selectRaw('round(sum(amount)) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'countWheel':
+                $q->leftJoin('gift_wheel','gift_wheel.id_user','users.id')
+                    ->selectRaw('count(gift_wheel.id) as amount')
+                    ->groupBy('users.id');
+                break;
+
+            case 'countWheelAmount':
+                $q->leftJoin('gift_wheel','gift_wheel.id_user','users.id')
+                    ->selectRaw('round(sum(amount)) as amount')
+                    ->groupBy('users.id');
+                break;
+        }
+
+        // ************* فیلتر تاریخ برای هر گروه
+        if (str_contains($request->sortFilter, 'Orders')) {
+            if ($start) $q->where('orders.created_at', '>=', $start);
+            if ($stop)  $q->where('orders.created_at', '<=', $stop);
+
+        } elseif (str_contains($request->sortFilter, 'Trades')) {
+            if ($start) $q->where('trades.created_at', '>=', $start);
+            if ($stop)  $q->where('trades.created_at', '<=', $stop);
+
+        } elseif (str_contains($request->sortFilter, 'ReferralTr')) {
+            if ($start) $q->where('users_referral_transaction.created_at', '>=', $start);
+            if ($stop)  $q->where('users_referral_transaction.created_at', '<=', $stop);
+
+        } elseif (str_contains($request->sortFilter, 'Referral')) {
+            if ($start) $q->where('users_referral.created_at', '>=', $start);
+            if ($stop)  $q->where('users_referral.created_at', '<=', $stop);
+        }
+
+        return $q;
+    }
+
+    private function filters($query, $request)
+    {
         $search = $request->search;
 
-        switch ($request->sortBy){
-            case 'nameFamily': $sortBy = 'name'; break;
-            case 'balanceInternalWallet': $sortBy = 'balanceInternal'; break;
-            case 'registeryDate': $sortBy = 'users.created_at'; break;
-            case 'id': $sortBy = 'users.id'; break;
-            default: $sortBy = $request->sortBy;
-        }
+        // فیلدهای مرتب‌سازی
+        $sortByMap = [
+            'nameFamily' => 'name',
+            'balanceInternalWallet' => 'balanceInternal',
+            'registeryDate' => 'users.created_at',
+            'id' => 'users.id'
+        ];
 
+        $sortBy = $sortByMap[$request->sortBy] ?? $request->sortBy;
+
+        // ************* جستجوی عمومی
         if (!empty($search)) {
-            $fields = ['users.id', 'email', 'name_display', 'name', 'family', 'mobile', 'national_code', 'phone', 'address', 'info'];
-            $users = $users->where(function ($query) use ($search, $fields) {
-                foreach ($fields as $field)
-                    $query->orWhere($field, 'like', '%' . $search . '%');
+            $fields = [
+                'users.id', 'email', 'name_display', 'name',
+                'family', 'mobile', 'national_code', 'phone',
+                'address', 'info'
+            ];
+
+            $query->where(function ($q) use ($fields, $search) {
+                foreach ($fields as $field) {
+                    $q->orWhere($field, 'like', "%$search%");
+                }
             });
         }
-        if (isset($request->level))
-            $users->where('level', $request->level);
-        if (isset($request->status)) {
-            if ($request->status == 'pending')
-                $users->whereRaw('JSON_CONTAINS(identification_img, ?)', [json_encode(array('status' => 'pending'))])
-                      ->orWhereRaw('JSON_CONTAINS(auth_img, ?)', [json_encode(array('status' => 'pending'))])
-                      ->orWhereRaw('JSON_CONTAINS(address, ?)', [json_encode(array('status' => 'pending'))]);
-            elseif ($request->status == 'pendingIdentification')
-                $users->whereRaw('JSON_CONTAINS(identification_img, ?)', [json_encode(array('status' => 'pending'))]);
-            elseif ($request->status == 'pendingAuthImg')
-                $users->whereRaw('JSON_CONTAINS(auth_img, ?)', [json_encode(array('status' => 'pending'))]);
-            elseif ($request->status == 'pendingLocation')
-                $users->whereRaw('JSON_CONTAINS(address, ?)', [json_encode(array('status' => 'pending'))]);
-            else
-                $users->where('access', $request->status);
+
+        // فیلتر level
+        if ($request->level)
+            $query->where('level', $request->level);
+
+        // ************* فیلتر وضعیت KYC
+        if ($request->status) {
+            switch ($request->status) {
+                case 'pending':
+                    $query->whereRaw('JSON_CONTAINS(identification_img, ?)', [json_encode(['status' => 'pending'])])
+                        ->orWhereRaw('JSON_CONTAINS(auth_img, ?)', [json_encode(['status' => 'pending'])])
+                        ->orWhereRaw('JSON_CONTAINS(address, ?)', [json_encode(['status' => 'pending'])]);
+                    break;
+
+                case 'pendingIdentification':
+                    $query->whereRaw('JSON_CONTAINS(identification_img, ?)', [json_encode(['status'=>'pending'])]);
+                    break;
+
+                case 'pendingAuthImg':
+                    $query->whereRaw('JSON_CONTAINS(auth_img, ?)', [json_encode(['status'=>'pending'])]);
+                    break;
+
+                case 'pendingLocation':
+                    $query->whereRaw('JSON_CONTAINS(address, ?)', [json_encode(['status'=>'pending'])]);
+                    break;
+
+                default:
+                    $query->where('access', $request->status);
+            }
         }
 
-        if (isset($request->balanceStart))
-            $users->where('users_wallets_internal.value_num','>=', $request->balanceStart);
-        if (isset($request->balanceStop))
-            $users->where('users_wallets_internal.value_num','<=', $request->balanceStop);
+        // ************* فیلترهای مالی
+        if ($request->balanceStart)
+            $query->where('users_wallets_internal.value_num', '>=', $request->balanceStart);
 
-        switch ($request->otherFilter){
-            case 'emailVerified':
-                $users->whereNotNull('email_verified_at');
-                break;
-            case 'emailNotVerified':
-                $users->whereNull('email_verified_at');
-                break;
+        if ($request->balanceStop)
+            $query->where('users_wallets_internal.value_num', '<=', $request->balanceStop);
+
+        // ************* فیلترهای جانبی
+        switch ($request->otherFilter) {
+            case 'emailVerified': $query->whereNotNull('email_verified_at'); break;
+            case 'emailNotVerified': $query->whereNull('email_verified_at'); break;
+
             case 'referral':
-                $users->rightJoin('users_referral','users_referral.id_user_referral','users.id');
+                $query->rightJoin('users_referral', 'users_referral.id_user_referral', 'users.id');
                 break;
+
             case 'referralNot':
-                $arrayId = UserReferral::pluck('id_user_referral')->toArray();
-                $users->whereNotIn('users.id',$arrayId);
+                $ids = UserReferral::pluck('id_user_referral')->toArray();
+                $query->whereNotIn('users.id', $ids);
                 break;
-            case 'notifActive':
-                $users->whereNotNull('firebase_token');
-                break;
-            case 'notifNotActive':
-                $users->whereNull('firebase_token');
-                break;
+
+            case 'notifActive': $query->whereNotNull('firebase_token'); break;
+            case 'notifNotActive': $query->whereNull('firebase_token'); break;
+
             case '2faActive':
-                $users->whereRaw('JSON_CONTAINS(twofa, ?)', [json_encode(array('status' => true))]);
+                $query->whereRaw('JSON_CONTAINS(twofa, ?)', [json_encode(['status'=>true])]);
                 break;
+
             case '2faNotActive':
-                $users->whereRaw('JSON_CONTAINS(twofa, ?)', [json_encode(array('status' => false))])->orWhereNull('twofa');
+                $query->whereRaw('JSON_CONTAINS(twofa, ?)', [json_encode(['status'=>false])])
+                    ->orWhereNull('twofa');
                 break;
-            case '2faSmsActive':
-                $users->whereRaw('JSON_CONTAINS(twofa, ?)', [json_encode(array('type' => 'sms','status'=>true))]);
-                break;
-            case '2faEmailActive':
-                $users->whereRaw('JSON_CONTAINS(twofa, ?)', [json_encode(array('type' => 'email','status'=>true))]);
-                break;
-            case '2faGoogleActive':
-                $users->whereRaw('JSON_CONTAINS(twofa, ?)', [json_encode(array('type' => 'google','status'=>true))]);
-                break;
+
             case 'registerWebsite':
-                $users->whereRaw('JSON_CONTAINS(info, ?)', [json_encode(array('register_via' => 'website'))]);
+                $query->whereRaw('JSON_CONTAINS(info, ?)', [json_encode(['register_via'=>'website'])]);
                 break;
+
             case 'registerAndroid':
-                $users->whereRaw('JSON_CONTAINS(info, ?)', [json_encode(array('register_via' => 'android'))]);
+                $query->whereRaw('JSON_CONTAINS(info, ?)', [json_encode(['register_via'=>'android'])]);
                 break;
+
             case 'registerIos':
-                $users->whereRaw('JSON_CONTAINS(info, ?)', [json_encode(array('register_via' => 'ios'))]);
-                break;
-            case 'digitalCurrencyAccess':
-                $users->whereRaw('JSON_CONTAINS(settings, ?)', [json_encode(array('access_digital_money' => true))]);
+                $query->whereRaw('JSON_CONTAINS(info, ?)', [json_encode(['register_via'=>'ios'])]);
                 break;
         }
 
-        if(isset($sortBy))
-            $users->orderBy($sortBy,$request->sortDesc?'desc':'asc');
-        return $users;
+        // ************* سورت
+        if ($sortBy)
+            $query->orderBy($sortBy, $request->sortDesc ? 'desc' : 'asc');
+
+        return $query;
     }
+
 
     function chartData(Request $request){
         $result = (object)array();

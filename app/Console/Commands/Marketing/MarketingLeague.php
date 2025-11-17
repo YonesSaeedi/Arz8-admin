@@ -4,6 +4,7 @@ namespace App\Console\Commands\Marketing;
 
 use App\Http\Controllers\Exchange\ExchangeApi;
 use App\Models\Cryptocurrency;
+use App\Models\Notifications;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
@@ -48,95 +49,157 @@ class MarketingLeague extends Command
      */
     public function handle()
     {
-        $reward = [
-            ['id_crypto' => 18, 'amount' => 1000000],
-            ['id_crypto' => 18, 'amount' => 500000],
-            ['id_crypto' => 18, 'amount' => 300000],
-            ['id_crypto' => 18, 'amount' => 100000],
-            ['id_crypto' => 18, 'amount' => 100000],
-        ];
-        $titles = ['جایزه نفر اول', 'جایزه نفر دوم', 'جایزه نفر سوم', 'جایزه نفر چهارم', 'جایزه نفر پنجم'];
+        DB::beginTransaction();
+        try {
+            // تعریف جوایز برای تمام رده‌ها
+            $rewards = [
+                // رده 1-5
+                ['id_crypto' => 18, 'amount' => 1000000, 'title' => 'جایزه نفر اول'],
+                ['id_crypto' => 18, 'amount' => 500000, 'title' => 'جایزه نفر دوم'],
+                ['id_crypto' => 18, 'amount' => 300000, 'title' => 'جایزه نفر سوم'],
+                ['id_crypto' => 18, 'amount' => 100000, 'title' => 'جایزه نفر چهارم'],
+                ['id_crypto' => 18, 'amount' => 100000, 'title' => 'جایزه نفر پنجم'],
 
-        //$startOfLeague = Carbon::createFromFormat('Y-m-d', '2025-10-19')->startOfDay();
-        $yesterdayStart = Carbon::now()->startOfDay();
-        $yesterdayEnd = Carbon::now()->endOfDay();
+                // رده 6-20 (15 نفر)
+                ...array_fill(0, 15, ['id_crypto' => 18, 'amount' => 25000, 'title' => 'جایزه رده 6-20']),
 
-        // گرفتن تاریخ آخرین برد هر کاربر
-        $winnerDates = Ml::select('date', 'id_user_1', 'id_user_2', 'id_user_3', 'id_user_4', 'id_user_5')->get();
-        $userLastWinMap = [];
+                // رده 21-50 (30 نفر)
+                ...array_fill(0, 30, ['id_crypto' => 18, 'amount' => 10000, 'title' => 'جایزه رده 21-50']),
 
-        foreach ($winnerDates as $row) {
-            $winDate = Carbon::parse($row->date)->addDay()->startOfDay(); // شروع محاسبه از روز بعد برد
-            foreach (['id_user_1', 'id_user_2', 'id_user_3', 'id_user_4', 'id_user_5'] as $field) {
-                $uid = $row->{$field};
-                if ($uid) {
-                    if (!isset($userLastWinMap[$uid]) || $winDate->gt($userLastWinMap[$uid])) {
-                        $userLastWinMap[$uid] = $winDate;
+                // رده 51-100 (50 نفر)
+                ...array_fill(0, 50, ['id_crypto' => 18, 'amount' => 5000, 'title' => 'جایزه رده 51-100']),
+            ];
+
+            $yesterday = Carbon::now()->subDay();
+            $yesterdayStart = $yesterday->copy()->startOfDay();
+            $yesterdayEnd = $yesterday->copy()->endOfDay();
+
+            // گرفتن تاریخ آخرین برد هر کاربر
+            $winnerDates = Ml::select('date', 'id_user_1', 'id_user_2', 'id_user_3', 'id_user_4', 'id_user_5')->get();
+            $userLastWinMap = [];
+
+            foreach ($winnerDates as $row) {
+                $winDate = Carbon::parse($row->date)->addDay()->startOfDay();
+                foreach (['id_user_1', 'id_user_2', 'id_user_3', 'id_user_4', 'id_user_5'] as $field) {
+                    $uid = $row->{$field};
+                    if ($uid) {
+                        if (!isset($userLastWinMap[$uid]) || $winDate->gt($userLastWinMap[$uid])) {
+                            $userLastWinMap[$uid] = $winDate;
+                        }
                     }
                 }
             }
-        }
 
-        // آرایه‌ای برای ذخیره مجموع خرید هر کاربر
-        $usersTotal = [];
+            // آرایه‌ای برای ذخیره مجموع خرید هر کاربر
+            $usersTotal = [];
 
-        // بارگذاری تدریجی سفارش‌ها با chunk
-        DB::table('orders')
-            ->where('status', 'success')
-            ->where('created_at', '<=', $yesterdayEnd)
-            ->where('created_at', '>=', $yesterdayStart)
-            ->where('id_user', '!=', 1)
-            ->select('id_user', 'amount', 'created_at')
-            ->orderBy('id_user')
-            ->chunk(1000, function ($ordersChunk) use (&$usersTotal, $userLastWinMap, $yesterdayEnd, $yesterdayStart) {
-                foreach ($ordersChunk as $order) {
-                    $uid = $order->id_user;
-                    // تاریخ شروع محاسبه برای هر کاربر: روز بعد آخرین برد یا شروع لیگ
-                    $userStart = $userLastWinMap[$uid] ?? $yesterdayStart;
+            // بارگذاری تدریجی سفارش‌ها با chunk
+            DB::table('orders')
+                ->where('status', 'success')
+                ->where('created_at', '<=', $yesterdayEnd)
+                ->where('created_at', '>=', $yesterdayStart)
+                ->where('id_user', '!=', 1)
+                ->select('id_user', 'amount', 'created_at')
+                ->orderBy('id_user')
+                ->chunk(1000, function ($ordersChunk) use (&$usersTotal, $userLastWinMap, $yesterdayEnd, $yesterdayStart) {
+                    foreach ($ordersChunk as $order) {
+                        $uid = $order->id_user;
+                        $userStart = $userLastWinMap[$uid] ?? $yesterdayStart;
 
-                    $createdAt = Carbon::parse($order->created_at);
-                    if ($createdAt->gte($userStart) && $createdAt->lte($yesterdayEnd)) {
-                        if (!isset($usersTotal[$uid])) {
-                            $usersTotal[$uid] = 0;
+                        $createdAt = Carbon::parse($order->created_at);
+                        if ($createdAt->gte($userStart) && $createdAt->lte($yesterdayEnd)) {
+                            if (!isset($usersTotal[$uid])) {
+                                $usersTotal[$uid] = 0;
+                            }
+                            $usersTotal[$uid] += $order->amount;
                         }
-                        $usersTotal[$uid] += $order->amount;
                     }
+                });
+
+            // تبدیل به collection و رتبه‌بندی
+            $rankedUsers = collect($usersTotal)
+                ->map(function ($total, $id_user) {
+                    return (object)[
+                        'id_user' => $id_user,
+                        'total_amount' => round($total)
+                    ];
+                })
+                ->sortByDesc('total_amount')
+                ->values();
+
+            // گرفتن 100 نفر اول با مجموع خرید بالاتر از صفر
+            $top100 = $rankedUsers->filter(fn($item) => $item->total_amount > 0)->take(100);
+
+            // پرداخت جوایز به 100 نفر برتر
+            foreach ($top100 as $key => $entry) {
+                if (!isset($rewards[$key])) break;
+
+                $userId = $entry->id_user;
+                $reward = (object)$rewards[$key];
+
+                // تولید عنوان مناسب بر اساس رتبه
+                $rank = $key + 1;
+                if ($rank <= 5) {
+                    $reward->title = "جایزه نفر {$rank}";
+                } elseif ($rank <= 20) {
+                    $reward->title = "جایزه رده 6-20 (رتبه {$rank})";
+                } elseif ($rank <= 50) {
+                    $reward->title = "جایزه رده 21-50 (رتبه {$rank})";
+                } else {
+                    $reward->title = "جایزه رده 51-100 (رتبه {$rank})";
                 }
-            });
 
-        // تبدیل به collection و رتبه‌بندی
-        $rankedUsers = collect($usersTotal)
-            ->map(function ($total, $id_user) {
-                return (object)[
-                    'id_user' => $id_user,
-                    'total_amount' => round($total)
+                $this->transactionCryptoWallet($userId, $reward, $reward->title);
+            }
+
+            // ذخیره نتایج در جدول لیگ (فقط 5 نفر اول برای نمایش در تاریخچه)
+            $MarketingLeague = new Ml();
+            $MarketingLeague->date = Carbon::yesterday()->toDateString();
+            $MarketingLeague->id_user_1 = $top100[0]->id_user ?? null;
+            $MarketingLeague->id_user_2 = $top100[1]->id_user ?? null;
+            $MarketingLeague->id_user_3 = $top100[2]->id_user ?? null;
+            $MarketingLeague->id_user_4 = $top100[3]->id_user ?? null;
+            $MarketingLeague->id_user_5 = $top100[4]->id_user ?? null;
+
+            // ذخیره اطلاعات کامل 100 نفر برتر در فیلد datadata
+            $winnersData = $top100->map(function ($user, $index) use ($rewards) {
+                $rank = $index + 1;
+                $prize = isset($rewards[$index]) ? $this->formatPrize($rewards[$index]['amount']) : 'بدون جایزه';
+                return [
+                    'rank' => $rank,
+                    'user_id' => $user->id_user,
+                    'amount' => $user->total_amount,
+                    'prize' => $prize
                 ];
-            })
-            ->sortByDesc('total_amount')
-            ->values();
+            })->toArray();
 
-        // گرفتن سه نفر اول با مجموع خرید بالاتر از صفر
-        $top3 = $rankedUsers->filter(fn($item) => $item->total_amount > 0)->take(5);
+            $MarketingLeague->data = json_encode(['1 میلیون شیبا', '500 هزار شیبا', '300 هزار شیبا', '100 هزار شیبا', '100 هزار شیبا']);
+            $MarketingLeague->datadata = json_encode($winnersData);
+            $MarketingLeague->save();
 
-        // پرداخت جوایز
-        foreach ($top3 as $key => $entry) {
-            if (!isset($reward[$key])) break;
-            $userId = $entry->id_user;
-            $this->transactionCryptoWallet($userId, (object)$reward[$key], $titles[$key]);
+            DB::commit();
+
+            // لاگ کردن اطلاعات
+            //\Log::channel('league')->info("لیگ بازاریابی پرداخت شد - تعداد برندگان: " . $top100->count());
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::channel('ErrorApi')->info("marketing:league ". $e->getMessage().':'.$e->getLine());
         }
-
-        // ذخیره نتایج در جدول لیگ
-        $MarketingLeague = new Ml();
-        $MarketingLeague->date = Carbon::yesterday()->toDateString();
-        $MarketingLeague->id_user_1 = $top3[0]->id_user ?? null;
-        $MarketingLeague->id_user_2 = $top3[1]->id_user ?? null;
-        $MarketingLeague->id_user_3 = $top3[2]->id_user ?? null;
-        $MarketingLeague->id_user_4 = $top3[3]->id_user ?? null;
-        $MarketingLeague->id_user_5 = $top3[4]->id_user ?? null;
-        $MarketingLeague->data = json_encode(['1 میلیون شیبا', '500 هزار شیبا', '300 هزار شیبا', '100 هزار شیبا', '100 هزار شیبا']);
-        $MarketingLeague->save();
 
         $this->nofitcation($MarketingLeague);
+    }
+
+// تابع کمکی برای فرمت کردن جایزه
+    private function formatPrize($amount)
+    {
+        if ($amount >= 1000000) {
+            return '1,000,000 SHIB';
+        } elseif ($amount >= 100000) {
+            return number_format($amount) . ' SHIB';
+        } else {
+            return number_format($amount) . ' SHIB';
+        }
     }
 
 
@@ -199,7 +262,7 @@ class MarketingLeague extends Command
 
         } catch (\Exception $e) {
             DB::rollback();
-            \Log::channel('ErrorApi')->info("RegisterLevel2: tr error". $e->getMessage().':'.$e->getLine());
+            \Log::channel('ErrorApi')->info("marketing:league 2". $e->getMessage().':'.$e->getLine());
             return false;
         }
     }
@@ -207,28 +270,45 @@ class MarketingLeague extends Command
 
     function nofitcation($MarketingLeague)
     {
-        // دریافت اطلاعات کاربران از دیتابیس
-        $user1 = $MarketingLeague->id_user_1 ? \App\Models\User::find($MarketingLeague->id_user_1) : null;
-        $user2 = $MarketingLeague->id_user_2 ? \App\Models\User::find($MarketingLeague->id_user_2) : null;
-        $user3 = $MarketingLeague->id_user_3 ? \App\Models\User::find($MarketingLeague->id_user_3) : null;
-        $user4 = $MarketingLeague->id_user_4 ? \App\Models\User::find($MarketingLeague->id_user_4) : null;
-        $user5 = $MarketingLeague->id_user_5 ? \App\Models\User::find($MarketingLeague->id_user_5) : null;
+        try {
+            // دریافت اطلاعات کاربران از دیتابیس
+            $user1 = $MarketingLeague->id_user_1 ? \App\Models\User::find($MarketingLeague->id_user_1) : null;
+            $user2 = $MarketingLeague->id_user_2 ? \App\Models\User::find($MarketingLeague->id_user_2) : null;
+            $user3 = $MarketingLeague->id_user_3 ? \App\Models\User::find($MarketingLeague->id_user_3) : null;
+            $user4 = $MarketingLeague->id_user_4 ? \App\Models\User::find($MarketingLeague->id_user_4) : null;
+            $user5 = $MarketingLeague->id_user_5 ? \App\Models\User::find($MarketingLeague->id_user_5) : null;
 
-        // ایجاد متن پیام
-        $msg = "🏆 برندگان مسابقه روز گذشته مشخص شدن!\n";
-        $msg .= "۲,۰۰۰,۰۰۰ شیبا بین ۵ نفر تقسیم شد 🎁\n\n";
+            // ایجاد متن پیام
+            $msg = "🏆 برندگان مسابقه روز گذشته مشخص شدن!\n";
+            $msg .= "۲,۰۰۰,۰۰۰ شیبا بین ۵ نفر تقسیم شد 🎁\n\n";
 
-        $msg .= "🥇 " . ($user1 ? $user1->name.' '.$user1->family : 'نامشخص') . "\n";
-        $msg .= "🥈 " . ($user2 ? $user2->name.' '.$user2->family : 'نامشخص') . "\n";
-        $msg .= "🥉 " . ($user3 ? $user3->name.' '.$user3->family : 'نامشخص') . "\n";
-        $msg .= "🎖 " . ($user4 ? $user4->name.' '.$user4->family : 'نامشخص') . "\n";
-        $msg .= "🎖 " . ($user5 ? $user5->name .' '.$user5->family: 'نامشخص') . "\n\n";
+            $msg .= "🥇 " . ($user1 ? $user1->name.' '.$user1->family : 'نامشخص') . "\n";
+            $msg .= "🥈 " . ($user2 ? $user2->name.' '.$user2->family : 'نامشخص') . "\n";
+            $msg .= "🥉 " . ($user3 ? $user3->name.' '.$user3->family : 'نامشخص') . "\n";
+            $msg .= "🎖 " . ($user4 ? $user4->name.' '.$user4->family : 'نامشخص') . "\n";
+            $msg .= "🎖 " . ($user5 ? $user5->name .' '.$user5->family: 'نامشخص') . "\n\n";
 
-        $msg .= "جوایز واریز شد ✅\n";
-        $msg .= "مسابقه امروز فعال است، از الان شروع کن 💎";
+            $msg .= "جوایز واریز شد ✅\n";
+            $msg .= "مسابقه امروز فعال است، از الان شروع کن 💎";
 
-        $func = new \App\Functions();
-        $func->sendMsgFirebase(env('APP_NAME'), $msg);
+            $func = new \App\Functions();
+            $func->sendMsgFirebase(env('APP_NAME'), $msg);
+
+
+
+            $notifications = new Notifications;
+            $notifications->id_user = null;
+            $notifications->title = 'لیگ شیبا';
+            $notifications->message = json_encode(['fa'=>$msg,'en'=>$msg]);
+            $notifications->keyword = 'message';
+            $notifications->seen = 'seen';
+            $notifications->save();
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::channel('ErrorApi')->info("marketing:league nofitcation". $e->getMessage().':'.$e->getLine());
+            return false;
+        }
     }
 
 }
