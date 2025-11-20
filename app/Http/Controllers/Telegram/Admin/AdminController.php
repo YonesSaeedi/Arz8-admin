@@ -82,6 +82,7 @@ Arz8.com'
 
 
     function coin360(){
+        return;
         $time = time();
         $params = array(
             "access_key" => "fee4864be29c44fdb87a6a226516adb5",

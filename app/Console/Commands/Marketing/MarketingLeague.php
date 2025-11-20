@@ -93,6 +93,7 @@ class MarketingLeague extends Command
             // آرایه‌ای برای ذخیره مجموع خرید هر کاربر
             $usersTotal = [];
 
+
             // بارگذاری تدریجی سفارش‌ها با chunk
             DB::table('orders')
                 ->where('status', 'success')
@@ -115,6 +116,8 @@ class MarketingLeague extends Command
                         }
                     }
                 });
+
+
 
             // تبدیل به collection و رتبه‌بندی
             $rankedUsers = collect($usersTotal)
@@ -149,7 +152,10 @@ class MarketingLeague extends Command
                     $reward->title = "جایزه رده 51-100 (رتبه {$rank})";
                 }
 
+
+
                 $this->transactionCryptoWallet($userId, $reward, $reward->title);
+
             }
 
             // ذخیره نتایج در جدول لیگ (فقط 5 نفر اول برای نمایش در تاریخچه)
@@ -174,14 +180,9 @@ class MarketingLeague extends Command
             })->toArray();
 
             $MarketingLeague->data = json_encode(['1 میلیون شیبا', '500 هزار شیبا', '300 هزار شیبا', '100 هزار شیبا', '100 هزار شیبا']);
-            $MarketingLeague->datadata = json_encode($winnersData);
             $MarketingLeague->save();
 
             DB::commit();
-
-            // لاگ کردن اطلاعات
-            //\Log::channel('league')->info("لیگ بازاریابی پرداخت شد - تعداد برندگان: " . $top100->count());
-
         } catch (\Exception $e) {
             DB::rollback();
             \Log::channel('ErrorApi')->info("marketing:league ". $e->getMessage().':'.$e->getLine());
@@ -258,9 +259,11 @@ class MarketingLeague extends Command
             }
 
             DB::commit();
+
             return true;
 
         } catch (\Exception $e) {
+            dd($e->getMessage());
             DB::rollback();
             \Log::channel('ErrorApi')->info("marketing:league 2". $e->getMessage().':'.$e->getLine());
             return false;
@@ -280,13 +283,14 @@ class MarketingLeague extends Command
 
             // ایجاد متن پیام
             $msg = "🏆 برندگان مسابقه روز گذشته مشخص شدن!\n";
-            $msg .= "۲,۰۰۰,۰۰۰ شیبا بین ۵ نفر تقسیم شد 🎁\n\n";
+            $msg .= "چندین میلیون شیبا بین ۱۰۰ نفر تقسیم شد 🎁\n\n";
 
             $msg .= "🥇 " . ($user1 ? $user1->name.' '.$user1->family : 'نامشخص') . "\n";
             $msg .= "🥈 " . ($user2 ? $user2->name.' '.$user2->family : 'نامشخص') . "\n";
             $msg .= "🥉 " . ($user3 ? $user3->name.' '.$user3->family : 'نامشخص') . "\n";
             $msg .= "🎖 " . ($user4 ? $user4->name.' '.$user4->family : 'نامشخص') . "\n";
             $msg .= "🎖 " . ($user5 ? $user5->name .' '.$user5->family: 'نامشخص') . "\n\n";
+            $msg .= "✨ " . "و این بار تا رتبه ۱۰۰ جایزه گرفتند! 😍" . "\n\n";
 
             $msg .= "جوایز واریز شد ✅\n";
             $msg .= "مسابقه امروز فعال است، از الان شروع کن 💎";
