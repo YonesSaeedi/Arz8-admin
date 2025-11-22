@@ -82,7 +82,7 @@ class Wallet extends Model
     private function calculateHash(float $value, string $type): string
     {
         $data = "{$this->id_user}|{$this->getWalletIdentifier()}|{$type}|{$value}|{$this->getHashSecret()}";
-        return Hash::make($data);
+        return hash_hmac('sha256', $data, $this->getHashSecret());
     }
 
     /**
@@ -101,7 +101,8 @@ class Wallet extends Model
      */
     private function verifyHash(float $value, string $hash, string $type): bool
     {
-        return Hash::check("{$this->id_user}|{$this->getWalletIdentifier()}|{$type}|{$value}|{$this->getHashSecret()}", $hash);
+        $data = "{$this->id_user}|{$this->getWalletIdentifier()}|{$type}|{$value}|{$this->getHashSecret()}";
+        return hash_equals(hash_hmac('sha256', $data, $this->getHashSecret()), $hash);
     }
 
     /**
