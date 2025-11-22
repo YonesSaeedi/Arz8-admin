@@ -15,6 +15,7 @@ use App\Models\TransactionCrypto;
 use App\Models\WalletsCrypto;
 use App\Http\Controllers\Controller;
 use App\Models\Marketing\MarketingLeague as Ml;
+use Telegram\Bot\Api;
 
 class MarketingLeague extends Command
 {
@@ -308,6 +309,13 @@ class MarketingLeague extends Command
             $notifications->seen = 'seen';
             $notifications->save();
 
+
+
+            $this->telegram = new Api("5519467988:AAHnqeh0X1NBKmhC5wXzGTTJvz7cfMnkvGc");
+            $response =  $this->telegram->sendMessage([
+                'chat_id' => '@arz8com',
+                'text' => $msg
+            ]);
         } catch (\Exception $e) {
             DB::rollback();
             \Log::channel('ErrorApi')->info("marketing:league nofitcation". $e->getMessage().':'.$e->getLine());
